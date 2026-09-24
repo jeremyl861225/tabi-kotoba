@@ -10,7 +10,7 @@
 
 | 項目 | 決定 |
 |---|---|
-| 字卡總量 | 1,200 詞（87 課） |
+| 字卡總量 | 1,200 詞（88 課） |
 | 主題 | 22 條：寒暄、數字、動詞形容詞、機場、電車、巴士計程車、自駕加油、問路、飯店、溫泉旅館、餐廳、料理、飲料甜點、購物、便利商店、藥妝、看醫生、緊急、觀光、標示、網路領錢天氣、店員與廣播常說的話（名稱在 `tools/themes.py`） |
 | 詞頻定義 | **旅遊實用頻率**：38 份中日英旅遊日語清單合併，被越多份收錄越優先；同分看 wordfreq Zipf。必備 25%／常用 37.5%／進階 37.5% |
 | 單元 | 先分級、級內依主題；**一站＝一課**（每課 ≤20 張），首頁每個等級是一條線 |
@@ -27,17 +27,16 @@
 - [x] 來源蒐集：38 份、2,828 筆 → `workspace/work/jp-travel-vocab/sources/`
 - [x] 正規化：2,321 個候選 → `build/candidates.json`
 - [x] 選字：代理＋`auto_curate.py` 規則補完＋`build/curate/manual.json`（刪 128 個多餘數字、補 46 個標準日期時間）
-- [x] 排名、分級、分課：1,200 張、87 課 → `build/selection.json`、`build/ids.json`（編號登記，勿刪）
-- [~] 字卡撰寫：12 批 × 100 張（`build/author/in-01…12.json` → `out-*.json`）。01–04 完成；05–08 代理撰寫中；09–12 待派
-- [~] build_data：已處理 `drop:true`（先拿掉、列進 qa 的 dropped；遞補要寫 manual.json 再跑 select）、以 pos 修正 kind、簡體字檢查改 s2tw；待全部寫完後 `build/qa.json` 清到 0、抽 30 張讀過
-- [ ] 語音：`tools/make_audio.py`（約 4,800 個檔、約 60 MB）
-- [~] e2e：首頁選擇器已改 `.stn`；待資料完成後跑 `--all-cards`
+- [x] 排名、分級、分課：1,200 張、88 課（遞補後） → `build/selection.json`、`build/ids.json`（編號登記，勿刪）
+- [x] 字卡撰寫：12 批 × 100 張＋遞補 1 批 25 張（`build/author/in-01…13.json` → `out-*.json`）。代理刪了 25 張，已寫進 `curate/manual.json` 重跑 select 遞補（新卡 1201–1225）
+- [x] build_data：1,200 張、88 課，`build/qa.json` 全部清到 0（讀音誤報逐張記在 `build/author/reading_ok.json`，人工修正在 `build/author/fix.json`）；抽 30 張讀過
+- [x] 語音：4,800 個檔、56 MB（`tools/make_audio.py`，0 失敗）
+- [x] e2e：`--all-cards` 全部通過（1,200 張、8 種題型都出現）
 - [x] index.html 開頭的 direction contract 註解更新成現在的米色版
 - [ ] impeccable 收尾：finish reviewer（截圖在 `.impeccable/review/`）→ documenter 產 DESIGN.md
 - [ ] 建 GitHub repo、開 Pages、線上驗證（precache HEAD 檢查、快取筆數、iPhone 飛航模式）
 
-代理撰寫時回報的待查項：0070 温めますか、0090 〜をください、0018 お元気ですか（kind 標 w 其實是句子）；0179 X線検査；
-0284 ドラッグストアはどこですか（由截斷的來源句補回）；0299 軟膏（字典釋義是同音的「難航」）；0386 どんな（詞性）。
+代理回報、可再斟酌的卡（不影響上線）：0889 移動博物館、0903 形態展示、0614 解説室 等博物館專門用語偏冷門；1016 空き部屋はありますか 與 0813 意思重疊；1126／1127／1133／1134 日期用阿拉伯數字（前面的日期卡用漢字數字）。
 
 ## 工具
 
