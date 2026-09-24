@@ -31,29 +31,55 @@ def segments(markup):
     return out
 
 
+LATIN_RUN = r"[A-Za-z](?:[A-Za-z\-]*[A-Za-z])?"
+KANJI_CLASS = "㐀-鿿豈-﫿々〆ヶ"
+# 英文字母的日文念法（JR、ATM、X線這類縮寫）；對不上時退回一般對齊
+LETTER = {"A": "エー|エイ", "B": "ビー", "C": "シー", "D": "ディー|デー", "E": "イー", "F": "エフ", "G": "ジー", "H": "エイチ|エッチ",
+          "I": "アイ", "J": "ジェー|ジェイ", "K": "ケー|ケイ", "L": "エル", "M": "エム", "N": "エヌ", "O": "オー", "P": "ピー", "Q": "キュー",
+          "R": "アール", "S": "エス", "T": "ティー|テー", "U": "ユー", "V": "ブイ|ヴィー", "W": "ダブリュー", "X": "エックス", "Y": "ワイ", "Z": "ゼット|ズィー"}
+
+
+def _is_latin(r):
+    return bool(re.match(r"[A-Za-z]", r))
+
+
 def _runs(text):
-    """把單字切成漢字段與假名段"""
-    return re.findall(r"[㐀-鿿豈-﫿々〆ヶ]+|[^㐀-鿿豈-﫿々〆ヶ]+", text)
+    """把單字切成漢字段、英文字母段與其他（假名、標點）段"""
+    return re.findall("[" + KANJI_CLASS + "]+|" + LATIN_RUN + "|[^" + KANJI_CLASS + "A-Za-z]+", text)
+
+
+def _letters_pat(run):
+    """全大寫縮寫（JR、ATM）照字母念法組 regex；不是縮寫回傳 None"""
+    if not (run.isalpha() and run.isupper()):
+        return None
+    return "(" + "".join("(?:" + "|".join(kata2hira(x) for x in LETTER[ch].split("|")) + ")" for ch in run) + ")"
 
 
 def align(head, read):
-    """漢字段對讀音：用假名段當錨點做 regex 配對；配不上回傳 None"""
+    """漢字段、英文字母段對讀音：用假名段當錨點做 regex 配對；配不上回傳 None。
+    英文字母段的標音一律用片假名（{JR|ジェイアール}、{Wi-Fi|ワイファイ}）"""
     runs = _runs(head)
-    pat = ""
-    for r in runs:
-        if has_kanji(r):
-            pat += "(.+?)"
-        else:
-            pat += re.escape(kata2hira(r))
-    m = re.fullmatch(pat, kata2hira(read))
+    m = None
+    for strict in (True, False):
+        pat = ""
+        for r in runs:
+            if has_kanji(r):
+                pat += "(.+?)"
+            elif _is_latin(r):
+                pat += (_letters_pat(r) if strict else None) or "(.+?)"
+            else:
+                pat += re.escape(kata2hira(r))
+        m = re.fullmatch(pat, kata2hira(read))
+        if m:
+            break
     if not m:
         return None
     out, gi = [], 0
     for r in runs:
-        if has_kanji(r):
+        if has_kanji(r) or _is_latin(r):
             rt = m.group(gi + 1)
             gi += 1
-            out.append((r, rt))
+            out.append((r, hira2kata(rt) if _is_latin(r) else rt))
         else:
             out.append((r, None))
     return out
@@ -61,16 +87,28 @@ def align(head, read):
 
 def word_ruby(head, read):
     """單字的標音標記：優先用 JmdictFurigana 的逐字對應，其次用假名錨點對齊，最後整段標"""
-    if not has_kanji(head):
+    latin = bool(re.search(r"[A-Za-z]", head))
+    if not has_kanji(head) and not latin:
         return head
-    fur = furigana_index()
-    segs = fur.get((head, read)) or fur.get((head, kata2hira(read)))
-    if segs:
-        return "".join(f"{{{b}|{rt}}}" if rt else b for b, rt in segs)
+    if not re.search(r"[ぁ-ゖァ-ヺ]", read):
+        return head  # 讀音欄沒有假名（照抄英文），不標
+    if not latin:
+        fur = furigana_index()
+        segs = fur.get((head, read)) or fur.get((head, kata2hira(read)))
+        if segs:
+            return "".join(f"{{{b}|{rt}}}" if rt else b for b, rt in segs)
     al = align(head, read)
     if al:
-        # 讀音裡的片假名（生ビール的ビール）原樣保留
-        return "".join(f"{{{b}|{rt}}}" if rt else b for b, rt in al)
+        # 讀音裡的片假名（生ビール的ビール）原樣保留；漢字段若查得到 JmdictFurigana 就再細分
+        fur = furigana_index()
+        out = []
+        for b, rt in al:
+            segs = (fur.get((b, rt)) or fur.get((b, kata2hira(rt)))) if rt and has_kanji(b) and len(b) > 1 else None
+            if segs:
+                out.append("".join(f"{{{x}|{y}}}" if y else x for x, y in segs))
+            else:
+                out.append(f"{{{b}|{rt}}}" if rt else b)
+        return "".join(out)
     return f"{{{head}|{kata2hira(read)}}}"
 
 

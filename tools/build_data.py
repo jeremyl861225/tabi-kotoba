@@ -28,7 +28,7 @@ def odd_chars(s):
 def phrase_ruby(head, read):
     """句子的標音：先用假名錨點對齊；對不上就逐詞用 Sudachi 讀音"""
     mk = word_ruby(head, read)
-    if reading(mk) == read and not (mk.startswith("{") and mk.endswith("}") and len(plain(mk)) > 4):
+    if kata2hira(reading(mk)) == kata2hira(read) and not (mk.startswith("{") and mk.endswith("}") and len(plain(mk)) > 4):
         return mk
     out = []
     for t in sudachi_tokens(head):
@@ -77,6 +77,12 @@ def head_in_example(head, ex):
     p = plain(ex)
     h = head.replace("〜", "").replace("～", "")
     if h in p:
+        return True
+    # 〇 是填數字的空格（バス〇分 → バス5分）
+    if "〇" in h and re.search(re.escape(h).replace("〇", "[0-9０-９一二三四五六七八九十百〇何]+"), p):
+        return True
+    # 美化語的「お／ご」可省略（お弁当 → 弁当）
+    if h[:1] in "おご" and len(h) > 2 and h[1:] in p:
         return True
     lemmas = {t.dictionary_form() for t in sudachi_tokens(p)} | {t.normalized_form() for t in sudachi_tokens(p)}
     if h in lemmas:
