@@ -96,6 +96,9 @@ def main():
     if os.path.exists(fixp):
         for d in json.load(open(fixp, encoding="utf-8")):
             authored.setdefault(d["id"], {}).update(d)
+    # 逐張確認過的讀音誤報（分析器唸錯、卡片是對的）：[卡片編號, 漢字, 標的讀音]
+    okp = os.path.join(BUILD, "author", "reading_ok.json")
+    reading_ok = {tuple(x) for x in json.load(open(okp, encoding="utf-8"))} if os.path.exists(okp) else set()
     themes = theme_list()
     tname = {t["id"]: t["name"] for t in themes}
 
@@ -148,7 +151,7 @@ def main():
         un = uncovered_kanji(ex)
         if un:
             qa["uncovered_kanji"].append([c["id"], ex, "".join(un)])
-        bad = check_sentence(ex)
+        bad = [b for b in check_sentence(ex) if (c["id"], b[0], b[1]) not in reading_ok]
         if bad:
             qa["reading_mismatch"].append([c["id"], ex, [list(b) for b in bad]])
         if kind != "p" and not head_in_example(head, ex):
