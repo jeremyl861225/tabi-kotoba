@@ -11,6 +11,8 @@ const CORE = [
   'js/audio.js',
   'js/ruby.js',
   'js/quiz.js',
+  'js/dict.js',
+  'data/dict.json',
   'data/cards.json',
   'manifest.webmanifest',
   'icons/icon-192.png',

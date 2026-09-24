@@ -49,8 +49,8 @@ def main():
     merges = []
     for key, d in dec.items():
         if key not in cands:
-            if d.get("keep") and d.get("added"):   # 人工補的詞（不在任何來源）
-                cands[key] = {"key": key, "n": 0, "sources": [], "meanings": d.get("meanings", {}), "gloss": []}
+            if d.get("keep") and d.get("added"):   # 人工補的詞：來源段落有整組列出、但抽取只抓到部分（例如日期 1～10 日）
+                cands[key] = {"key": key, "n": len(d.get("sources", [])), "sources": d.get("sources", []), "meanings": d.get("meanings", {}), "gloss": []}
             else:
                 continue
         if d.get("keep"):
@@ -155,7 +155,8 @@ def main():
                 host = max(fam, key=lambda t: len(groups[t]))
                 groups[host].extend(groups.pop(th))
                 groups[host].sort(key=lambda it: it["rank"])
-        order = sorted(groups.items(), key=lambda kv: kv[1][0]["rank"])
+        # 課的順序：整組的平均排名（比單看第一名穩定，必備線才不會從招牌開始）
+        order = sorted(groups.items(), key=lambda kv: sum(x["rank"] for x in kv[1]) / len(kv[1]))
         for th, g in order:
             k = math.ceil(len(g) / UNIT_MAX)
             size = math.ceil(len(g) / k)

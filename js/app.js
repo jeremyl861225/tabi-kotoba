@@ -3,6 +3,7 @@ import { store, save, isStarred, toggleStar, markSeen, recordAnswer, unitRec, ex
 import { play, stop, nextVoice, voiceName, audioUrl, cachedSet, downloadAudio } from './audio.js';
 import { rubyHTML, plain, esc, toHira, normQuery, romaKey, isAscii } from './ruby.js';
 import { buildQuiz, TYPES, TYPE_HINT, TYPE_GROUPS } from './quiz.js';
+import { loadDict, searchDict, dictReady } from './dict.js';
 
 const $app = document.getElementById('app');
 const $meta = document.querySelector('meta[name="theme-color"]') || (() => {
@@ -55,10 +56,12 @@ function setField(t) {
   $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#f5efe3';
 }
 
-function badge(themeId, no, sm = false) {
-  const t = THEME[themeId];
-  return `<span class="badge${sm ? ' sm' : ''}" style="${fieldVars(t)}" aria-hidden="true"><span class="code">${t.code}</span><span class="no">${String(no).padStart(2, '0')}</span></span>`;
+function unitBadge(u, sm = false) {
+  const t = THEME[u.th];
+  return `<span class="badge${sm ? ' sm' : ''}" style="${fieldVars(t)}" aria-hidden="true"><span class="code">${TIER[u.t].name[0]}</span><span class="no">${String(u.sn).padStart(2, '0')}</span></span>`;
 }
+const stationName = (u) => `${TIER[u.t].name}線第 ${u.sn} 站`;
+
 function starBtn(id) {
   const on = isStarred(id);
   return `<button class="star-btn" data-star="${id}" aria-pressed="${on}" aria-label="${on ? '取消不熟標記' : '標記為不熟'}">${I.star()}</button>`;
@@ -85,16 +88,13 @@ function toast(msg) {
 }
 
 // 站點線：已過的站填滿、現在的站是一個會滑過去的圈（跑燈）
-function stopsHTML(total, current, state) {
-  const frac = (i) => (total > 1 ? +(i / (total - 1)).toFixed(4) : 0.5);
-  const dots = Array.from({ length: total }, (_, i) => {
-    const s = state ? state(i) : (i < current ? 'done' : '');
-    const inner = s === 'ok' ? I.check('') : s === 'ng' ? I.cross('') : '';
-    return `<i class="${s}">${inner}</i>`;
+// 課程內的進度：一格一個單字（站點留給「課」）
+function segsHTML(total, current, state) {
+  const segs = Array.from({ length: total }, (_, i) => {
+    const st = state ? state(i) : (i < current ? 'done' : i === current ? 'cur' : '');
+    return `<i class="${st}"></i>`;
   }).join('');
-  const from = lastStop && lastStop.total === total && lastStop.i !== current ? frac(lastStop.i) : frac(current);
-  lastStop = { total, i: current };
-  return `<div class="stops" aria-hidden="true" style="--from:${from};--to:${frac(current)}"><span class="rail"></span>${dots}<span class="here"></span></div>`;
+  return `<div class="segs" aria-hidden="true">${segs}</div>`;
 }
 
 /* ---------- 路由 ---------- */
@@ -163,7 +163,6 @@ function nextUnit() {
 
 function viewHome() {
   const nu = nextUnit();
-  const nt = THEME[nu.th];
   const rec = unitRec(nu.id);
   const seenCount = CARDS.filter((c) => store.seen[c.id]).length;
   const doneUnits = UNITS.filter((u) => unitRec(u.id).done).length;
@@ -171,43 +170,44 @@ function viewHome() {
   const pos = Math.min(rec.pos || 0, nu.cards.length - 1);
   const firstCard = BYID[nu.cards[pos]];
   const nuSeen = nu.cards.filter((id) => store.seen[id]).length;
-  lastStop = null;
 
   const tiers = DATA.tiers.map((tier) => {
     const us = UNITS.filter((u) => u.t === tier.id);
+    const done = us.filter((u) => unitRec(u.id).done).length;
     const rows = us.map((u) => {
       const r = unitRec(u.id);
       const seen = u.cards.filter((id) => store.seen[id]).length;
-      const dots = u.cards.map((id) => `<i class="${store.seen[id] ? 'on' : ''}"></i>`).join('');
-      return `<li><a class="mu${r.done ? ' done' : ''}" href="#/unit/${u.id}" style="${strokeVars(THEME[u.th])}" aria-label="${esc(u.title)}，已學 ${seen}／${u.cards.length}${r.done ? '，已到着' : ''}">
-        <span class="mu-node" aria-hidden="true"></span>
-        <span class="mu-title"><span class="code">${THEME[u.th].code}</span><span class="t">${esc(u.title)}</span>${r.done ? '<span class="flag">到着</span>' : ''}</span>
-        <span class="mu-best">${r.best != null ? `${r.best}/${r.total}` : ''}</span>
-        <span class="mu-line" aria-hidden="true">${dots}</span>
+      const state = r.done ? 'done' : u.id === nu.id ? 'cur' : seen ? 'going' : '';
+      return `<li class="${state}" style="${strokeVars(THEME[u.th])}"><a class="stn" href="#/unit/${u.id}" aria-label="${stationName(u)}：${esc(u.title)}，已學 ${seen}／${u.cards.length}${r.done ? '，已到着' : ''}">
+        <span class="stn-dot" aria-hidden="true">${r.done ? I.check('') : ''}</span>
+        <span class="stn-main">
+          <span class="stn-name">${esc(u.title)}</span>
+          <span class="stn-sub"><span class="stn-no">${TIER[u.t].name[0]}${String(u.sn).padStart(2, '0')}</span>${u.cards.length} 個單字${seen && !r.done ? `，已學 ${seen}` : ''}</span>
+          ${seen && !r.done ? `<span class="stn-bar"><i style="--p:${(seen / u.cards.length).toFixed(3)}"></i></span>` : ''}
+        </span>
+        <span class="stn-meta">${r.done ? '<b class="arrived">到着</b>' : ''}${r.best != null ? `<span>測驗 ${r.best}/${r.total}</span>` : ''}</span>
       </a></li>`;
     }).join('');
-    const tSeen = CARDS.filter((c) => c.t === tier.id && store.seen[c.id]).length;
-    const tAll = CARDS.filter((c) => c.t === tier.id).length;
     return `<section class="tier" aria-labelledby="tier-${tier.id}">
-      <div class="tier-head"><h2 id="tier-${tier.id}">${tier.name}</h2>${stars(tier.id)}<span class="tier-n">${tSeen}／${tAll}</span></div>
-      <ol class="map">${rows}</ol>
+      <div class="tier-head"><h2 id="tier-${tier.id}">${tier.name}線</h2>${stars(tier.id)}<span class="tier-n">${done}／${us.length} 站到着</span></div>
+      <ol class="route">${rows}</ol>
     </section>`;
   }).join('');
 
   $app.innerHTML = `
     <header class="home-top">
       <h1 class="brand" lang="ja"><ruby>旅<rt>たび</rt></ruby>ことば</h1>
-      <p class="home-status">已學 <b>${seenCount}</b>／${CARDS.length} 字，到着 <b>${doneUnits}</b>／${UNITS.length} 課${starCount ? `，<a href="#/starred">不熟 <b>${starCount}</b> 字</a>` : ''}</p>
+      <p class="home-status">已學 <b>${seenCount}</b>／${CARDS.length} 字，到着 <b>${doneUnits}</b>／${UNITS.length} 站${starCount ? `，<a href="#/starred">不熟 <b>${starCount}</b> 字</a>` : ''}</p>
     </header>
-    <a class="next" href="#/learn/${nu.id}/${pos}" data-autoplay style="${fieldVars(nt)}">
-      <div class="next-head">${badge(nu.th, nu.from)}<div><h2>${esc(nu.title)}</h2><p>${pos ? '從' : '第一站'} <span lang="ja">${esc(plain(firstCard.w))}</span>${pos ? ' 繼續' : ''}</p></div></div>
-      ${stopsHTML(nu.cards.length, pos, (i) => (store.seen[nu.cards[i]] ? 'done' : ''))}
-      <div class="next-foot"><span class="n">${nuSeen}／${nu.cards.length} 站</span><span class="next-go">${pos ? '繼續學習' : '開始學習'}${I.go()}</span></div>
+    <a class="next" href="#/learn/${nu.id}/${pos}" data-autoplay style="${fieldVars(THEME[nu.th])}">
+      <div class="next-head">${unitBadge(nu)}<div><h2>${esc(nu.title)}</h2><p>下一站：${stationName(nu)}</p></div></div>
+      ${segsHTML(nu.cards.length, pos, (i) => (store.seen[nu.cards[i]] ? 'done' : ''))}
+      <div class="next-foot"><span class="n">${nuSeen ? `已學 ${nuSeen}／${nu.cards.length} 字，從 <span lang="ja">${esc(plain(firstCard.w))}</span> 繼續` : `${nu.cards.length} 個單字，第一個是 <span lang="ja">${esc(plain(firstCard.w))}</span>`}</span><span class="next-go">${pos ? '繼續' : '出發'}${I.go()}</span></div>
     </a>
     <nav class="jump" aria-label="跳到等級">${DATA.tiers.map((t) => {
       const us = UNITS.filter((u) => u.t === t.id);
       const d = us.filter((u) => unitRec(u.id).done).length;
-      return `<a href="#tier-${t.id}" data-jump="${t.id}"><b>${t.name}</b><span>${d}／${us.length} 課</span></a>`;
+      return `<a href="#tier-${t.id}" data-jump="${t.id}"><b>${t.name}線</b><span>${d}／${us.length} 站</span></a>`;
     }).join('')}</nav>
     ${tiers}`;
 }
@@ -219,21 +219,23 @@ function viewUnit(uid) {
   const t = THEME[u.th];
   setField(t);
   const rec = unitRec(uid);
+  const seen = u.cards.filter((id) => store.seen[id]).length;
   const list = u.cards.map((id, i) => {
     const c = BYID[id];
-    return `<li><a class="station${store.seen[id] ? ' seen' : ''}" href="#/learn/${uid}/${i}" data-autoplay>
-      <span class="stop" aria-hidden="true"></span>
-      <span class="st-main"><span class="st-w" lang="ja">${rubyHTML(c.w)}</span><span class="st-zh">${esc(c.zh)}</span></span>
-      <span class="st-no">${isStarred(id) ? `${I.starFill()}<span class="sr-only">不熟</span>` : ''}${t.code}${String(c.no).padStart(2, '0')}</span>
-    </a></li>`;
+    return `<a class="row word-row${store.seen[id] ? ' seen' : ''}" href="#/learn/${uid}/${i}" data-autoplay>
+      <span class="idx" aria-hidden="true">${i + 1}</span>
+      <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh">${esc(c.zh)}</span></span>
+      ${starBtn(id)}
+    </a>`;
   }).join('');
   $app.innerHTML = `
-    <div class="topbar"><a class="icon-btn" href="#/" aria-label="回路線圖">${I.back()}</a><span class="title">${TIER[u.t].name}</span></div>
-    <div class="unit-head">${badge(u.th, u.from)}<div><h1>${esc(u.title)}</h1><p>${t.code}${String(u.from).padStart(2, '0')} 到 ${t.code}${String(u.to).padStart(2, '0')}，共 ${u.cards.length} 站${rec.best != null ? `；測驗最佳 ${rec.best}/${rec.total}` : ''}</p></div></div>
-    <ol class="stations">${list}</ol>
+    <div class="topbar"><a class="icon-btn" href="#/" aria-label="回路線圖">${I.back()}</a><span class="title">${TIER[u.t].name}線</span></div>
+    <div class="unit-head">${unitBadge(u)}<div><h1>${esc(u.title)}</h1><p>${stationName(u)}，${u.cards.length} 個單字${seen ? `，已學 ${seen}` : ''}${rec.best != null ? `，測驗最佳 ${rec.best}/${rec.total}` : ''}</p></div></div>
+    ${segsHTML(u.cards.length, -1, (i) => (store.seen[u.cards[i]] ? 'done' : ''))}
+    <div class="list">${list}</div>
     <div class="dock"><div class="dock-inner">
       <a class="pill" href="#/learn/${uid}/${Math.min(rec.pos || 0, u.cards.length - 1)}" data-autoplay>${rec.pos ? '繼續學習' : '開始學習'}</a>
-      <button class="pill ghost" data-unit-quiz="${uid}">測驗這一課</button>
+      <button class="pill ghost" data-unit-quiz="${uid}">測驗這一站</button>
     </div></div>`;
 }
 
@@ -255,7 +257,7 @@ function cardHTML(card, opts = {}) {
     <span class="pos">${esc(card.pos || '')}</span>
     <div class="say-row">${sayBtn(card.id, 'w', card.k === 'p' ? '整句' : '單字')}</div>
     ${ex}
-    <div class="facts">${stars(card.t)}<span>${TIER[card.t].name}</span><span>旅遊頻率第 ${card.rank} 名</span>${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${THEME[card.th].code}${String(card.no).padStart(2, '0')}</span></div>
+    <div class="facts">${stars(card.t)}<span>${TIER[card.t].name}</span><span>旅遊頻率第 ${card.rank} 名</span>${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
   </article>`;
 }
 
@@ -286,7 +288,7 @@ function viewLearn(uid, idx, opts = {}) {
       <span class="count">${i + 1}/${u.cards.length}</span>
       ${starBtn(card.id)}
     </div>
-    ${stopsHTML(u.cards.length, i)}
+    ${segsHTML(u.cards.length, i)}
     ${cardHTML(card, { learn: true })}
     <div class="dock"><div class="dock-inner">
       ${neighborBtn(prev, 'prev', '上一站')}
@@ -307,15 +309,15 @@ function viewArrive(u) {
   lastStop = null;
   $app.innerHTML = `
     <div class="topbar"><a class="icon-btn" href="#/unit/${u.id}" aria-label="回路線">${I.back()}</a><span class="title">${esc(u.title)}</span></div>
-    ${stopsHTML(u.cards.length, u.cards.length - 1, () => 'done')}
+    ${segsHTML(u.cards.length, u.cards.length - 1, () => 'done')}
     <section class="terminal">
       <div class="word" lang="ja" style="--hw:56px"><ruby>到着<rt>とうちゃく</rt></ruby></div>
-      <p>${esc(u.title)}的 ${u.cards.length} 個單字都看過了。</p>
-      ${nu && nu.id !== u.id ? `<p>下一站是「${esc(nu.title)}」。</p>` : ''}
+      <p>${stationName(u)}「${esc(u.title)}」的 ${u.cards.length} 個單字都看過了。</p>
+      ${nu && nu.id !== u.id ? `<p>下一站：${stationName(nu)}「${esc(nu.title)}」。</p>` : ''}
     </section>
     <div class="dock"><div class="dock-inner">
       ${nu && nu.id !== u.id ? `<a class="pill ghost" href="#/unit/${nu.id}">下一站</a>` : `<a class="pill ghost" href="#/">回路線圖</a>`}
-      <button class="pill" data-unit-quiz="${u.id}">測驗這一課</button>
+      <button class="pill" data-unit-quiz="${u.id}">測驗這一站</button>
     </div></div>`;
   $app.dataset.nav = '{}';
 }
@@ -374,7 +376,7 @@ function filterCards() {
 
 function rowHTML(c) {
   return `<a class="row" href="#/card/${c.id}" data-autoplay>
-    ${badge(c.th, c.no, true)}
+    ${UNIT[c.u] ? unitBadge(UNIT[c.u], true) : ''}
     <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh">${esc(c.zh)}</span></span>
     ${starBtn(c.id)}
   </a>`;
@@ -386,14 +388,56 @@ function viewBrowse() {
     .concat(DATA.themes.map((t) => `<button class="chip" data-f-th="${t.id}" aria-pressed="${browse.th === t.id}" style="${fieldVars(t)}"><span class="dot"></span>${esc(t.name)}</button>`)).join('');
   $app.innerHTML = `
     <div class="search">
-      <label class="search-box">${I.search()}<input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="漢字、假名、羅馬拼音或中文" value="${esc(browse.q)}" aria-label="搜尋單字"></label>
+      <label class="search-box">${I.search()}<input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="查單字：漢字、假名、拼音、中文、英文" value="${esc(browse.q)}" aria-label="搜尋單字"></label>
       <div class="chips" role="group" aria-label="依等級篩選">${tierChips}<button class="chip" data-f-star aria-pressed="${browse.star}">${I.star('ico-s')}只看不熟</button></div>
       <div class="chips" role="group" aria-label="依主題篩選">${themeChips}</div>
     </div>
     <div id="results"></div>`;
   renderResults();
   const q = document.getElementById('q');
-  q.addEventListener('input', () => { browse.q = q.value; browse.shown = 80; renderResults(); });
+  let t = null;
+  q.addEventListener('input', () => {
+    browse.q = q.value; browse.shown = 80;
+    clearTimeout(t); t = setTimeout(renderResults, 90);
+  });
+  loadDict().then(() => { if (browse.q.trim()) renderResults(); }).catch(() => {});
+}
+
+// 字典（字卡以外的字）
+let cardForms = null;
+function dictHTML(q) {
+  if (!q.trim()) return '';
+  if (!dictReady()) return '<div class="dict-head"><span>字典</span><span>載入中…</span></div>';
+  if (!cardForms) {
+    cardForms = new Set();
+    for (const c of CARDS) { cardForms.add(c._plain); cardForms.add(c._hira); }
+  }
+  const hits = searchDict(q, cardForms);
+  if (!hits.length) return '<div class="dict-head"><span>字典</span><span>沒有找到</span></div>';
+  const rows = hits.map(({ e }) => {
+    const reading = e.r ? e.r[0] : '';
+    const kana = e.u || !e.k;
+    const main = kana ? esc(reading) : `<ruby>${esc(e.k[0])}<rt>${esc(reading)}</rt></ruby>`;
+    const alt = kana && e.k ? `<span class="d-alt">${esc(e.k[0])}</span>` : '';
+    return `<div class="drow">
+      <div class="d-main"><span class="d-w" lang="ja">${main}</span>${alt}${e.p ? `<span class="d-p">${esc(e.p)}</span>` : ''}</div>
+      <div class="d-g" lang="en">${esc(e.g)}</div>
+      <button class="d-say" data-tts="${esc(reading)}" aria-label="用手機語音念 ${esc(reading)}">${I.speaker('ico-s')}</button>
+    </div>`;
+  }).join('');
+  return `<div class="dict-head"><span>字典（字卡以外的字）</span><span>${hits.length} 筆・英文釋義</span></div><div class="list dict">${rows}</div>`;
+}
+
+// 字典的字沒有預錄音檔，用手機內建語音念
+function speakJa(text) {
+  if (!('speechSynthesis' in window)) return toast('這支手機不支援語音朗讀');
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'ja-JP';
+  u.rate = store.settings.rate;
+  const v = speechSynthesis.getVoices().find((x) => /^ja/i.test(x.lang));
+  if (v) u.voice = v;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
 }
 
 function renderResults() {
@@ -406,8 +450,9 @@ function renderResults() {
     <div class="meta-row"><span>${list.length} 張字卡</span>
       ${browse.q ? '' : `<select id="sort" aria-label="排序"><option value="rank"${browse.sort === 'rank' ? ' selected' : ''}>依旅遊頻率</option><option value="kana"${browse.sort === 'kana' ? ' selected' : ''}>依五十音</option></select>`}
     </div>
-    ${list.length ? `<div class="list">${list.slice(0, browse.shown).map(rowHTML).join('')}</div>` : `<div class="empty"><b>沒有符合的字卡</b>換個寫法試試，例如「きっぷ」「kippu」或「車票」。</div>`}
-    ${list.length > browse.shown ? `<button class="pill ghost more" data-more>再顯示 ${Math.min(120, list.length - browse.shown)} 張</button>` : ''}`;
+    ${list.length ? `<div class="list">${list.slice(0, browse.shown).map(rowHTML).join('')}</div>` : (browse.q.trim() ? '<p class="none">字卡裡沒有這個字，看看下面的字典。</p>' : `<div class="empty"><b>沒有符合的字卡</b>換個條件試試。</div>`)}
+    ${list.length > browse.shown ? `<button class="pill ghost more" data-more>再顯示 ${Math.min(120, list.length - browse.shown)} 張</button>` : ''}
+    ${browse.tier || browse.th || browse.star ? '' : dictHTML(browse.q)}`;
   const sort = document.getElementById('sort');
   if (sort) sort.addEventListener('change', () => { browse.sort = sort.value; renderResults(); });
 }
@@ -566,7 +611,7 @@ function viewQuizRun() {
       <span class="title">${esc(quiz.label)}</span>
       <span class="count">${quiz.i + 1}/${quiz.list.length}</span>
     </div>
-    ${stopsHTML(quiz.list.length, quiz.i, (k) => { const a = quiz.list[k]; return a.answer == null ? '' : a.answer ? 'ok' : 'ng'; })}
+    ${segsHTML(quiz.list.length, quiz.i, (k) => { const a = quiz.list[k]; return a.answer == null ? '' : a.answer ? 'ok' : 'ng'; })}
     <div class="stage${lastDir ? ' from-' + lastDir : ''}">
       <div class="q-kind">${LISTEN.has(q.type) ? '聽力' : q.type === 'spell' ? '拼音' : '看字'}・${TYPES[q.type]}</div>
       <div class="prompt">${prompt}</div>
@@ -629,7 +674,7 @@ function viewTerminal() {
   ctxList = { ids: wrong.map((c) => c.id), label: '答錯的單字' };
   $app.innerHTML = `
     <div class="topbar"><button class="icon-btn" data-quiz-quit aria-label="離開">${I.close()}</button><span class="title">${esc(quiz.label)}</span></div>
-    ${stopsHTML(total, total - 1, (k) => (quiz.list[k].answer ? 'ok' : 'ng'))}
+    ${segsHTML(total, total - 1, (k) => (quiz.list[k].answer ? 'ok' : 'ng'))}
     <section class="terminal">
       <div class="word" lang="ja"><ruby>終点<rt>しゅうてん</rt></ruby></div>
       <div class="score">${right}<small>/${total}</small></div>
@@ -726,10 +771,11 @@ function applyTheme() {
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click', async (e) => {
-  const el = e.target.closest('[data-tile],[data-slot],[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-jump],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
+  const el = e.target.closest('[data-tts],[data-tile],[data-slot],[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-jump],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
   if (!el) return;
   const d = el.dataset;
 
+  if (d.tts !== undefined) { speakJa(d.tts); return; }
   if (d.tile !== undefined) { spellTap(+d.tile, null); return; }
   if (d.slot !== undefined) { spellTap(null, +d.slot); return; }
   if (d.star !== undefined) {
@@ -886,6 +932,7 @@ async function boot() {
   UNIT = Object.fromEntries(UNITS.map((u) => [u.id, u]));
   TIER = Object.fromEntries(DATA.tiers.map((t) => [t.id, t]));
   for (const u of UNITS) for (const id of u.cards) BYID[id].u = u.id;
+  for (const t of DATA.tiers) UNITS.filter((u) => u.t === t.id).forEach((u, i) => { u.sn = i + 1; });
   for (const c of CARDS) {
     c._plain = plain(c.w);
     c._plainN = normQuery(c._plain);
