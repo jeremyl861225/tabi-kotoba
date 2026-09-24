@@ -29,10 +29,10 @@
 - [x] 選字：代理＋`auto_curate.py` 規則補完＋`build/curate/manual.json`（刪 128 個多餘數字、補 46 個標準日期時間）
 - [x] 排名、分級、分課：1,200 張、87 課 → `build/selection.json`、`build/ids.json`（編號登記，勿刪）
 - [~] 字卡撰寫：12 批 × 100 張（`build/author/in-01…12.json` → `out-*.json`）。01–04 完成；05–08 代理撰寫中；09–12 待派
-- [ ] build_data：處理撰寫輸出的 `drop:true`（在 manual.json 刪掉再跑 select 遞補）、以撰寫的 pos 修正 kind（句子→p、其餘→w）、pos 允許「連體詞」；`build/qa.json` 清到 0；抽 30 張讀過
+- [~] build_data：已處理 `drop:true`（先拿掉、列進 qa 的 dropped；遞補要寫 manual.json 再跑 select）、以 pos 修正 kind、簡體字檢查改 s2tw；待全部寫完後 `build/qa.json` 清到 0、抽 30 張讀過
 - [ ] 語音：`tools/make_audio.py`（約 4,800 個檔、約 60 MB）
-- [ ] e2e：首頁選擇器 `.mu` 改 `.stn`，跑 `--all-cards`
-- [ ] index.html 開頭的 direction contract 註解更新成現在的米色版
+- [~] e2e：首頁選擇器已改 `.stn`；待資料完成後跑 `--all-cards`
+- [x] index.html 開頭的 direction contract 註解更新成現在的米色版
 - [ ] impeccable 收尾：finish reviewer（截圖在 `.impeccable/review/`）→ documenter 產 DESIGN.md
 - [ ] 建 GitHub repo、開 Pages、線上驗證（precache HEAD 檢查、快取筆數、iPhone 飛航模式）
 
