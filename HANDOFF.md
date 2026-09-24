@@ -1,7 +1,7 @@
 # 旅ことば Tabi Kotoba — 交接檔
 
-日本旅遊日文單字卡 PWA（手機優先、可離線）。repo：`jeremyl861225/tabi-kotoba`（public，**尚未建立**），
-上線網址預定 <https://jeremyl861225.github.io/tabi-kotoba/>。
+日本旅遊日文單字卡 PWA（手機優先、可離線）。repo：`jeremyl861225/tabi-kotoba`（public），
+**已上線** <https://jeremyl861225.github.io/tabi-kotoba/>（2026-09-25）。
 
 整套做法已抽成 skill **`travel-vocab-app-builder`**（`~/.claude/skills/travel-vocab-app-builder/`），
 之後要拿來做韓文、法文、冰島文版。這裡完成的每個階段若踩到新坑，**回頭寫進那份 skill**（SKILL.md 的「常見錯誤」與「跨版本修正紀錄」）。
@@ -34,7 +34,8 @@
 - [x] e2e：`--all-cards` 全部通過（1,200 張、8 種題型都出現）
 - [x] index.html 開頭的 direction contract 註解更新成現在的米色版
 - [ ] impeccable 收尾：finish reviewer（截圖在 `.impeccable/review/`）→ documenter 產 DESIGN.md
-- [ ] 建 GitHub repo、開 Pages、線上驗證（precache HEAD 檢查、快取筆數、iPhone 飛航模式）
+- [x] 建 GitHub repo、開 Pages、線上驗證：CORE 15 檔與抽查音檔都是 200、預先快取 15 筆、斷網重開可用、離線字典可查（Chromium 實測）
+- [ ] iPhone 實機：加到主畫面 → 設定頁下載必備線發音 → 飛航模式開一課、播發音、做測驗
 
 代理回報、可再斟酌的卡（不影響上線）：0889 移動博物館、0903 形態展示、0614 解説室 等博物館專門用語偏冷門；1016 空き部屋はありますか 與 0813 意思重疊；1126／1127／1133／1134 日期用阿拉伯數字（前面的日期卡用漢字數字）。
 
