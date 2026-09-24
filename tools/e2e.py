@@ -34,7 +34,7 @@ def main():
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.goto(BASE)
         pg.wait_for_selector(".next")
-        n_units = pg.eval_on_selector_all(".mu", "els => els.length")
+        n_units = pg.eval_on_selector_all(".stn", "els => els.length")
         check(n_units == len(data["units"]), f"首頁課數 {n_units} ≠ {len(data['units'])}")
 
         # 每張卡：沒有橫向溢出、假名數量正確

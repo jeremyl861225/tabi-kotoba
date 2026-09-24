@@ -14,7 +14,15 @@ import opencc
 
 TIERS = [{"id": 1, "name": "必備"}, {"id": 2, "name": "常用"}, {"id": 3, "name": "進階"}]
 jp2t = opencc.OpenCC("jp2t")
-s2t = opencc.OpenCC("s2t")
+s2tw = opencc.OpenCC("s2tw")
+# 台灣常用、OpenCC 卻會轉成「臺／隻／註」的字，不算簡體
+TW_OK = set("台只注")
+
+
+def odd_chars(s):
+    """中文欄位裡的簡體字或日文新字體（国、学、体…）；「」『』裡引用的日文原文不算"""
+    s = re.sub(r"「[^」]*」|『[^』]*』", "", s)
+    return "".join(sorted({a for a, b in zip(s, s2tw.convert(s)) if a != b and a not in TW_OK}))
 
 
 def phrase_ruby(head, read):
@@ -93,9 +101,18 @@ def main():
 
     qa = collections.defaultdict(list)
     cards, tts = [], {}
+    dropped = set()
     for c in sel["cards"]:
         a = authored.get(c["id"], {})
         head, read, kind = c["head"], c["reading"], c["kind"]
+        # 撰寫代理判定不該收的卡：先拿掉（要遞補就把它的 keys 寫進 curate/manual.json 再跑 select）
+        if a.get("drop"):
+            qa["dropped"].append([c["id"], head, a.get("why", ""), c.get("keys", [])])
+            dropped.add(c["id"])
+            continue
+        # 選字階段的 kind 會標錯（店員問句標成 w、「3番」標成 p），以撰寫代理的詞性為準
+        if a.get("pos"):
+            kind = "p" if a["pos"] == "句子" else "w"
         if a.get("head"):
             head = a["head"]
         if a.get("reading"):
@@ -125,8 +142,9 @@ def main():
         if not ex:
             qa["missing_ex"].append([c["id"], head])
             continue
-        if s2t.convert(zh + card["exz"] + card.get("note", "")) != zh + card["exz"] + card.get("note", ""):
-            qa["simplified_chinese"].append([c["id"], zh, card["exz"]])
+        odd = odd_chars(zh + card["exz"] + card.get("note", ""))
+        if odd:
+            qa["simplified_chinese"].append([c["id"], odd, zh, card["exz"], card.get("note", "")])
         un = uncovered_kanji(ex)
         if un:
             qa["uncovered_kanji"].append([c["id"], ex, "".join(un)])
@@ -141,8 +159,11 @@ def main():
     # 單元標題
     units = []
     for u in sel["units"]:
+        ids = [x for x in u["cards"] if x not in dropped]
+        if not ids:
+            continue
         title = tname[u["th"]] + (f" {u['part']}" if u["parts"] > 1 else "")
-        units.append({**u, "title": title})
+        units.append({**u, "cards": ids, "title": title})
 
     # 來源清單與音檔大小
     srcs = json.load(open(os.path.join(BUILD, "sources_meta.json"), encoding="utf-8"))
