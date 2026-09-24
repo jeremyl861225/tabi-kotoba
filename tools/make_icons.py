@@ -16,27 +16,32 @@ LINE = (0x9C, 0x53, 0x4C)     # 朱赭（緊急・求助那組色票的主色）
 
 
 def draw(size, scale=1.0):
+    """先把字與路線畫在透明圖層，量出實際筆畫範圍後整組置中：上下留白等寬、左右留白等寬
+    （2026-09-25 使用者要求上下界等寬；原本字的位置是目測，上方留白比下方多約一半）"""
     S = 1024
-    img = Image.new("RGB", (S, S), GROUND)
-    d = ImageDraw.Draw(img)
-    c = S / 2
     k = scale
+    layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    c = S / 2
     font = ImageFont.truetype(FONT, int(400 * k), index=FONT_INDEX)
     bb = d.textbbox((0, 0), TEXT, font=font)
     w, h = bb[2] - bb[0], bb[3] - bb[1]
     top = c - h / 2 - int(70 * k)
-    d.text((c - w / 2 - bb[0], top - bb[1]), TEXT, font=font, fill=INK)
+    d.text((c - w / 2 - bb[0], top - bb[1]), TEXT, font=font, fill=INK + (255,))
     # 路線與站點：前兩站實心（已到），最後一站空心（下一站）
     y = c + int(300 * k)
     x0, x1 = c - int(380 * k), c + int(380 * k)
     lw = int(40 * k)
-    d.rounded_rectangle([x0, y - lw / 2, x1, y + lw / 2], radius=lw / 2, fill=LINE)
+    d.rounded_rectangle([x0, y - lw / 2, x1, y + lw / 2], radius=lw / 2, fill=LINE + (255,))
     r = int(38 * k)
     for i, x in enumerate([x0 + lw / 2, c, x1 - lw / 2]):
         if i < 2:
-            d.ellipse([x - r, y - r, x + r, y + r], fill=INK)
+            d.ellipse([x - r, y - r, x + r, y + r], fill=INK + (255,))
         else:
-            d.ellipse([x - r, y - r, x + r, y + r], fill=GROUND, outline=LINE, width=int(16 * k))
+            d.ellipse([x - r, y - r, x + r, y + r], fill=GROUND + (255,), outline=LINE + (255,), width=int(16 * k))
+    group = layer.crop(layer.getbbox())
+    img = Image.new("RGB", (S, S), GROUND)
+    img.paste(group, ((S - group.width) // 2, (S - group.height) // 2), group)
     return img.resize((size, size), Image.LANCZOS)
 
 
