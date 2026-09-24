@@ -1,56 +1,58 @@
-"""App 圖示：一塊迷你站名牌——「たび」標在「旅」上方，下緣是山手線色帶。
-iOS 會自己切圓角，所以輸出滿版方形；maskable 版把內容縮到安全區內。"""
+"""App 圖示：深靛藍底、白色 M PLUS 1 粗體「旅」＋「たび」標音，下緣一條山手線綠的路線與站點。
+iOS 會自己切圓角，所以輸出滿版方形；maskable 版把內容縮進安全區。
+字型用 workspace 裡的 M PLUS 1 完整檔（OFL）。"""
 from PIL import Image, ImageDraw, ImageFont
-import os, sys
+import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "icons")
-FONT_DIR = "/System/Library/Fonts/"
-W7 = FONT_DIR + "ヒラギノ角ゴシック W7.ttc"
-W6 = FONT_DIR + "ヒラギノ角ゴシック W6.ttc"
+FONT = os.path.expanduser("~/Desktop/Claude code/workspace/work/jp-travel-vocab/fonts/MPLUS1-var.ttf")
+NIGHT = (0x12, 0x14, 0x36)
 LINE = (0x80, 0xC2, 0x41)
-PLATFORM = (0xE4, 0xE8, 0xE7)
+WHITE = (255, 255, 255)
+RUBY = (0xA2, 0xA6, 0xC8)
 
 
-def ink_box(draw, xy, text, font):
-    return draw.textbbox(xy, text, font=font)
+def font(size, weight):
+    f = ImageFont.truetype(FONT, size)
+    try:
+        f.set_variation_by_axes([weight])
+    except Exception:
+        pass
+    return f
 
 
-def draw_sign(size, scale=1.0):
+def draw(size, scale=1.0):
     S = 1024
-    img = Image.new("RGB", (S, S), PLATFORM if scale < 1 else (255, 255, 255))
+    img = Image.new("RGB", (S, S), NIGHT)
     d = ImageDraw.Draw(img)
-    # 內容區（maskable 時縮小置中）
-    cw = int(S * scale)
-    ox = (S - cw) // 2
-    if scale < 1:
-        d.rounded_rectangle([ox, ox, ox + cw, ox + cw], radius=int(cw * 0.06), fill=(255, 255, 255))
-    band_h = int(cw * 0.085)
-    band_y = ox + int(cw * 0.74)
-    d.rectangle([ox, band_y, ox + cw, band_y + band_h], fill=LINE)
-    notch = int(band_h * 0.9)
-    d.polygon([(ox, band_y), (ox + notch, band_y + band_h / 2), (ox, band_y + band_h)], fill=(255, 255, 255))
-    d.polygon([(ox + cw, band_y), (ox + cw - notch, band_y + band_h / 2), (ox + cw, band_y + band_h)], fill=(255, 255, 255))
-    # 「旅」與「たび」：量墨跡框再堆疊（日文字型上下留白不對稱）
-    f_big = ImageFont.truetype(W7, int(cw * 0.46))
-    f_small = ImageFont.truetype(W6, int(cw * 0.13))
-    bb = ink_box(d, (0, 0), "旅", f_big)
-    sb = ink_box(d, (0, 0), "たび", f_small)
-    big_h = bb[3] - bb[1]
-    small_h = sb[3] - sb[1]
-    gap = int(cw * 0.035)
-    total = small_h + gap + big_h
-    top = ox + (band_y - ox - total) // 2 + int(cw * 0.01)
-    sx = ox + (cw - (sb[2] - sb[0])) // 2 - sb[0]
-    d.text((sx, top - sb[1]), "たび", font=f_small, fill=(0x44, 0x4C, 0x4F))
-    bx = ox + (cw - (bb[2] - bb[0])) // 2 - bb[0]
-    d.text((bx, top + small_h + gap - bb[1]), "旅", font=f_big, fill=(0, 0, 0))
+    c = S / 2
+    k = scale
+    big = font(int(470 * k), 800)
+    small = font(int(120 * k), 700)
+    bb = d.textbbox((0, 0), "旅", font=big)
+    sb = d.textbbox((0, 0), "たび", font=small)
+    gap = int(26 * k)
+    total = (sb[3] - sb[1]) + gap + (bb[3] - bb[1])
+    top = c - total / 2 - int(70 * k)
+    d.text((c - (sb[2] - sb[0]) / 2 - sb[0], top - sb[1]), "たび", font=small, fill=RUBY)
+    d.text((c - (bb[2] - bb[0]) / 2 - bb[0], top + (sb[3] - sb[1]) + gap - bb[1]), "旅", font=big, fill=WHITE)
+    # 路線與站點
+    y = c + int(330 * k)
+    x0, x1 = c - int(380 * k), c + int(380 * k)
+    lw = int(40 * k)
+    d.rounded_rectangle([x0, y - lw / 2, x1, y + lw / 2], radius=lw / 2, fill=LINE)
+    for i, x in enumerate([x0 + lw / 2, c, x1 - lw / 2]):
+        r = int(38 * k)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=WHITE if i < 2 else NIGHT, outline=LINE if i == 2 else None, width=int(16 * k))
+        if i == 2:
+            d.ellipse([x - r, y - r, x + r, y + r], outline=LINE, width=int(16 * k))
     return img.resize((size, size), Image.LANCZOS)
 
 
 os.makedirs(OUT, exist_ok=True)
-draw_sign(192).save(os.path.join(OUT, "icon-192.png"))
-draw_sign(512).save(os.path.join(OUT, "icon-512.png"))
-draw_sign(180).save(os.path.join(OUT, "apple-touch-icon.png"))
-draw_sign(512, scale=0.78).save(os.path.join(OUT, "icon-maskable-512.png"))
-print("icons written to", OUT)
+draw(192).save(os.path.join(OUT, "icon-192.png"))
+draw(512).save(os.path.join(OUT, "icon-512.png"))
+draw(180).save(os.path.join(OUT, "apple-touch-icon.png"))
+draw(512, scale=0.8).save(os.path.join(OUT, "icon-maskable-512.png"))
+print("icons written")
