@@ -1,4 +1,4 @@
-"""App 圖示：深靛藍底、白色明朝體「旅」＋「たび」標音，下緣一條路線與站點（基本會話線的色）。
+"""App 圖示：米色底、墨色明朝體「旅」＋「たび」標音，下緣一條朱赭色的路線與站點。
 iOS 會自己切圓角，所以輸出滿版方形；maskable 版把內容縮進安全區。
 字型用 macOS 內建的ヒラギノ明朝 ProN（只用來畫圖示，不隨 App 發佈）。"""
 from PIL import Image, ImageDraw, ImageFont
@@ -7,10 +7,10 @@ import os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "icons")
 FONT = "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc"
-NIGHT = (0x12, 0x14, 0x36)
-LINE = (0x7B, 0x9C, 0xD6)   # 基本會話線的色，提亮一階讓深底上看得見
-WHITE = (255, 255, 255)
-RUBY = (0xA2, 0xA6, 0xC8)
+NIGHT = (0xF5, 0xEF, 0xE3)   # 米色底
+LINE = (0x9C, 0x53, 0x4C)   # 朱赭（緊急・求助那組色票的主色）
+WHITE = (0x1C, 0x18, 0x14)   # 墨色（沿用變數名：字與實心站點）
+RUBY = (0x78, 0x6B, 0x59)
 
 
 def font(size, weight):

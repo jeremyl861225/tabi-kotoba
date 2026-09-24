@@ -31,30 +31,28 @@ const I = {
 };
 const stars = (t) => `<span class="stars" role="img" aria-label="${4 - t} 顆星">${I.starFill().repeat(4 - t)}</span>`;
 
-/* ---------- 路線色 ---------- */
-const fieldVars = (t) => `--line:${t.field};--on:${t.on};--on-2:${t.on2};--on-3:${t.on3};--veil:${t.veil};--paper:${t.paper};--pink:${t.ink}`;
+/* ---------- 路線色（只當點綴：底色一律米色） ---------- */
+function isDark() {
+  const t = store.settings.theme;
+  return t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+const strokeOf = (t) => (isDark() ? t.lD : t.lL) || t.field;
+const fieldVars = (t) => `--line:${t.field};--on:${t.on};--stroke:${strokeOf(t)}`;
 const strokeVars = (t) => `--lL:${t.lL};--lD:${t.lD};--tL:${t.tL};--tD:${t.tD};${fieldVars(t)}`;
-const END_FIELD = { field: '#1e2148', on: '#ffffff', on2: 'rgba(255, 255, 255, 0.78)', on3: 'rgba(255, 255, 255, 0.3)', veil: 'rgba(255, 255, 255, 0.14)', paper: '#fafafa', ink: '#1d2034' };
-const FIELD_KEYS = ['--line', '--on', '--on-2', '--on-3', '--veil', '--paper', '--pink'];
 
-// 整片色場：色場畫面把路線色鋪滿 body；一般畫面還原
+// 進入某一課／某一題時，把該單元的點綴色設到 body；一般畫面還原
 function setField(t) {
   const b = document.body;
   if (!t) {
-    b.classList.remove('drench');
-    FIELD_KEYS.forEach((k) => b.style.removeProperty(k));
-    $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#f3f4fa';
-    return;
+    b.classList.remove('lesson');
+    ['--line', '--on', '--stroke'].forEach((k) => b.style.removeProperty(k));
+  } else {
+    b.classList.add('lesson');
+    b.style.setProperty('--line', t.field);
+    b.style.setProperty('--on', t.on);
+    b.style.setProperty('--stroke', strokeOf(t));
   }
-  b.classList.add('drench');
-  b.style.setProperty('--line', t.field);
-  b.style.setProperty('--on', t.on);
-  b.style.setProperty('--on-2', t.on2);
-  b.style.setProperty('--on-3', t.on3);
-  b.style.setProperty('--veil', t.veil);
-  b.style.setProperty('--paper', t.paper);
-  b.style.setProperty('--pink', t.ink);
-  $meta.content = t.field;
+  $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#f5efe3';
 }
 
 function badge(themeId, no, sm = false) {
@@ -626,7 +624,7 @@ function viewTerminal() {
     if (rec.best == null || right / total > rec.best / rec.total) { rec.best = right; rec.total = total; }
     save();
   }
-  setField(END_FIELD);
+  setField(THEME.GR || DATA.themes[0]);
   const wrong = quiz.list.filter((q) => !q.answer).map((q) => q.card);
   ctxList = { ids: wrong.map((c) => c.id), label: '答錯的單字' };
   $app.innerHTML = `
@@ -637,7 +635,7 @@ function viewTerminal() {
       <div class="score">${right}<small>/${total}</small></div>
       <p>${right === total ? '全部答對，這段路線很熟了。' : `答錯 ${wrong.length} 題，可以加星收進不熟單字。`}</p>
     </section>
-    ${wrong.length ? `<div class="meta-row" style="color:var(--on-2)"><span>答錯的單字</span><button class="pill ghost small" data-star-all>全部加星</button></div>
+    ${wrong.length ? `<div class="meta-row"><span>答錯的單字</span><button class="pill ghost small" data-star-all>全部加星</button></div>
       <div class="list">${wrong.map(rowHTML).join('')}</div>` : ''}
     <div class="dock"><div class="dock-inner">
       ${wrong.length ? '<button class="pill ghost" data-quiz-retry>重考答錯的</button>' : ''}
@@ -723,7 +721,7 @@ function applyTheme() {
   else document.documentElement.setAttribute('data-theme', t);
   document.body.classList.toggle('furi-none', store.settings.furigana === 'none');
   document.body.classList.toggle('furi-word', store.settings.furigana === 'word');
-  if (!document.body.classList.contains('drench')) setField(null);
+  if (!document.body.classList.contains('lesson')) setField(null);
 }
 
 /* ---------- 事件 ---------- */
@@ -859,7 +857,7 @@ document.addEventListener('touchend', (e) => {
 }, { passive: true });
 
 document.addEventListener('audio-error', () => toast('這個音檔還沒下載，連上網路後再試一次'));
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (!document.body.classList.contains('drench')) setField(null); });
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => render());
 
 async function runDownload(tier, btn) {
   const row = document.querySelector(`[data-dl-row="${tier}"]`);

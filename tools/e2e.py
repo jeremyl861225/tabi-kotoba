@@ -70,10 +70,19 @@ def main():
         u = data["units"][0]
         pg.goto(BASE + f"#/unit/{u['id']}")
         pg.click("[data-unit-quiz]")
+        kinds = set()
         for i in range(len(u["cards"])):
-            pg.wait_for_selector("[data-choice]")
-            pg.click("[data-choice='0']")
+            pg.wait_for_selector("[data-choice], [data-tile]")
+            kinds.add(pg.inner_text(".q-kind"))
+            if pg.query_selector("[data-tile]"):
+                # 拼音題：依序點方塊直到填滿（不管對錯），確認會自動判分
+                while pg.query_selector(".bank [data-tile]:not([disabled])") and not pg.query_selector("[data-quiz-next]"):
+                    pg.click(".bank [data-tile]:not([disabled])")
+            else:
+                pg.click("[data-choice='0']")
             pg.click("[data-quiz-next]")
+        print("出現的題型：", "、".join(sorted(kinds)))
+        check(len(kinds) >= min(4, len(u["cards"])), f"單元測驗題型太少：{kinds}")
         pg.wait_for_selector(".score")
         check("/" in pg.inner_text(".score"), "測驗沒有到終點")
 
