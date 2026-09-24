@@ -9,7 +9,8 @@ const DEFAULT_SETTINGS = {
   autoplay: true,
   veil: false,          // 學習時先遮住中文
   theme: 'auto',        // auto | light | dark
-  quizTypes: ['j2z', 'z2j', 'aud', 'kan'],
+  quizTypes: ['j2z', 'z2j', 'kan', 'aud', 'audz', 'exl', 'spell', 'dict'],
+  qv: 2,              // 題型清單版本：舊版只有四種，升級時自動全開
   quizCount: 20,
 };
 
@@ -31,11 +32,12 @@ function load() {
     if (!raw) return fresh();
     const s = JSON.parse(raw);
     const f = fresh();
-    return {
-      ...f,
-      ...s,
-      settings: { ...f.settings, ...(s.settings || {}) },
-    };
+    const settings = { ...f.settings, ...(s.settings || {}) };
+    if ((s.settings || {}).qv !== f.settings.qv) {
+      settings.quizTypes = f.settings.quizTypes;
+      settings.qv = f.settings.qv;
+    }
+    return { ...f, ...s, settings };
   } catch (e) {
     return fresh();
   }

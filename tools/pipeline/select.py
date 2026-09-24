@@ -13,6 +13,7 @@ from wordfreq import zipf_frequency
 TARGET = int(os.environ.get("TK_TARGET", 1200))
 TIER_SIZES = (0.25, 0.375)          # 必備 25%、常用 37.5%、其餘進階
 UNIT_MAX, UNIT_MIN = 20, 4
+THEME_FLOOR = int(os.environ.get("TK_THEME_FLOOR", 30))
 FAMILY = {  # 太小的主題組併到同家族裡最大的一組
     "GR": "basic", "VB": "basic", "NM": "basic",
     "AP": "move", "TR": "move", "BT": "move", "DR": "move", "DI": "move",
@@ -91,6 +92,27 @@ def main():
     pool.sort(key=lambda it: (-it["n"], -it["zipf"], it["reading"]))
     print(f"保留 {len(pool)} 個（去重後），目標 {TARGET}")
     sel = pool[:TARGET]
+    # 主題保底：使用者指定要的主題（自駕、溫泉、藥妝…）常只有少數專題文章收錄，
+    # 單看收錄數會整批落榜；每個主題至少收 THEME_FLOOR 個（不足就全收），補進來的仍依頻率排在後段
+    have = collections.Counter(it["theme"] for it in sel)
+    extra = []
+    for th in THEME_IDS:
+        need = THEME_FLOOR - have[th]
+        if need > 0:
+            more = [it for it in pool[TARGET:] if it["theme"] == th][:need]
+            extra += more
+            have[th] += len(more)
+    if extra:
+        drop, i = [], len(sel) - 1
+        while len(drop) < len(extra) and i >= 0:
+            th = sel[i]["theme"]
+            if have[th] > THEME_FLOOR:
+                drop.append(i)
+                have[th] -= 1
+            i -= 1
+        sel = [it for k, it in enumerate(sel) if k not in set(drop)] + extra
+        sel.sort(key=lambda it: (-it["n"], -it["zipf"], it["reading"]))
+        print(f"主題保底補入 {len(extra)} 個：", collections.Counter(it["theme"] for it in extra).most_common())
     dist = collections.Counter(it["n"] for it in sel)
     print("入選的收錄數分佈:", sorted(dist.items(), reverse=True))
 

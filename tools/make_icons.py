@@ -1,25 +1,21 @@
-"""App 圖示：深靛藍底、白色 M PLUS 1 粗體「旅」＋「たび」標音，下緣一條山手線綠的路線與站點。
+"""App 圖示：深靛藍底、白色明朝體「旅」＋「たび」標音，下緣一條路線與站點（基本會話線的色）。
 iOS 會自己切圓角，所以輸出滿版方形；maskable 版把內容縮進安全區。
-字型用 workspace 裡的 M PLUS 1 完整檔（OFL）。"""
+字型用 macOS 內建的ヒラギノ明朝 ProN（只用來畫圖示，不隨 App 發佈）。"""
 from PIL import Image, ImageDraw, ImageFont
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, "icons")
-FONT = os.path.expanduser("~/Desktop/Claude code/workspace/work/jp-travel-vocab/fonts/MPLUS1-var.ttf")
+FONT = "/System/Library/Fonts/ヒラギノ明朝 ProN.ttc"
 NIGHT = (0x12, 0x14, 0x36)
-LINE = (0x80, 0xC2, 0x41)
+LINE = (0x7B, 0x9C, 0xD6)   # 基本會話線的色，提亮一階讓深底上看得見
 WHITE = (255, 255, 255)
 RUBY = (0xA2, 0xA6, 0xC8)
 
 
 def font(size, weight):
-    f = ImageFont.truetype(FONT, size)
-    try:
-        f.set_variation_by_axes([weight])
-    except Exception:
-        pass
-    return f
+    # TTC 第 0 個是 ProN W3、第 2 個是 ProN W6
+    return ImageFont.truetype(FONT, size, index=2 if weight >= 600 else 0)
 
 
 def draw(size, scale=1.0):

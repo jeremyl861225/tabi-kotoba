@@ -12,7 +12,6 @@ const CORE = [
   'js/ruby.js',
   'js/quiz.js',
   'data/cards.json',
-  'fonts/mplus1-sub.woff2',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',

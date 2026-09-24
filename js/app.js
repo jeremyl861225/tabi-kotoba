@@ -2,7 +2,7 @@
 import { store, save, isStarred, toggleStar, markSeen, recordAnswer, unitRec, exportBackup, importBackup, resetAll } from './store.js';
 import { play, stop, nextVoice, voiceName, audioUrl, cachedSet, downloadAudio } from './audio.js';
 import { rubyHTML, plain, esc, toHira, normQuery, romaKey, isAscii } from './ruby.js';
-import { buildQuiz, TYPES } from './quiz.js';
+import { buildQuiz, TYPES, TYPE_HINT, TYPE_GROUPS } from './quiz.js';
 
 const $app = document.getElementById('app');
 const $meta = document.querySelector('meta[name="theme-color"]') || (() => {
@@ -32,16 +32,17 @@ const I = {
 const stars = (t) => `<span class="stars" role="img" aria-label="${4 - t} 顆星">${I.starFill().repeat(4 - t)}</span>`;
 
 /* ---------- 路線色 ---------- */
-const fieldVars = (t) => `--line:${t.field};--on:${t.on};--on-2:${t.on2};--on-3:${t.on3};--veil:${t.veil}`;
+const fieldVars = (t) => `--line:${t.field};--on:${t.on};--on-2:${t.on2};--on-3:${t.on3};--veil:${t.veil};--paper:${t.paper};--pink:${t.ink}`;
 const strokeVars = (t) => `--lL:${t.lL};--lD:${t.lD};--tL:${t.tL};--tD:${t.tD};${fieldVars(t)}`;
-const END_FIELD = { field: '#1e2148', on: '#ffffff', on2: 'rgba(255, 255, 255, 0.78)', on3: 'rgba(255, 255, 255, 0.3)', veil: 'rgba(255, 255, 255, 0.14)' };
+const END_FIELD = { field: '#1e2148', on: '#ffffff', on2: 'rgba(255, 255, 255, 0.78)', on3: 'rgba(255, 255, 255, 0.3)', veil: 'rgba(255, 255, 255, 0.14)', paper: '#fafafa', ink: '#1d2034' };
+const FIELD_KEYS = ['--line', '--on', '--on-2', '--on-3', '--veil', '--paper', '--pink'];
 
 // 整片色場：色場畫面把路線色鋪滿 body；一般畫面還原
 function setField(t) {
   const b = document.body;
   if (!t) {
     b.classList.remove('drench');
-    ['--line', '--on', '--on-2', '--on-3', '--veil'].forEach((k) => b.style.removeProperty(k));
+    FIELD_KEYS.forEach((k) => b.style.removeProperty(k));
     $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#f3f4fa';
     return;
   }
@@ -51,6 +52,8 @@ function setField(t) {
   b.style.setProperty('--on-2', t.on2);
   b.style.setProperty('--on-3', t.on3);
   b.style.setProperty('--veil', t.veil);
+  b.style.setProperty('--paper', t.paper);
+  b.style.setProperty('--pink', t.ink);
   $meta.content = t.field;
 }
 
@@ -203,6 +206,11 @@ function viewHome() {
       ${stopsHTML(nu.cards.length, pos, (i) => (store.seen[nu.cards[i]] ? 'done' : ''))}
       <div class="next-foot"><span class="n">${nuSeen}／${nu.cards.length} 站</span><span class="next-go">${pos ? '繼續學習' : '開始學習'}${I.go()}</span></div>
     </a>
+    <nav class="jump" aria-label="跳到等級">${DATA.tiers.map((t) => {
+      const us = UNITS.filter((u) => u.t === t.id);
+      const d = us.filter((u) => unitRec(u.id).done).length;
+      return `<a href="#tier-${t.id}" data-jump="${t.id}"><b>${t.name}</b><span>${d}／${us.length} 課</span></a>`;
+    }).join('')}</nav>
     ${tiers}`;
 }
 
@@ -443,7 +451,6 @@ function viewQuizSetup() {
   if (quizSetup.scope === 'unit') sub = `<div class="wrap"><select id="qs-unit" class="chip" style="width:100%;height:46px" aria-label="選擇單元">${DATA.tiers.map((t) => `<optgroup label="${t.name}">${UNITS.filter((u) => u.t === t.id).map((u) => `<option value="${u.id}"${quizSetup.unit === u.id ? ' selected' : ''}>${esc(u.title)}</option>`).join('')}</optgroup>`).join('')}</select></div>`;
   const n = scopeCards().length;
   const counts = [10, 20, 30, 0];
-  const desc = { j2z: '出現日文，選中文意思', z2j: '出現中文，選日文單字', aud: '只播放發音，選聽到的單字', kan: '出現沒有標音的漢字，選正確讀音' };
   $app.innerHTML = `
     <h1 class="page-title">測驗</h1>
     <h2 class="group-title">範圍</h2>
@@ -452,10 +459,10 @@ function viewQuizSetup() {
       ${sub}
       <p class="hint">這個範圍有 ${n} 個單字。</p>
     </div>
-    <h2 class="group-title">題型</h2>
+    ${TYPE_GROUPS.map(([g, ks]) => `<h2 class="group-title">題型・${g}</h2>
     <div class="group checks">
-      ${Object.entries(TYPES).map(([k, l]) => `<label class="check"><input type="checkbox" data-qt="${k}" ${S.quizTypes.includes(k) ? 'checked' : ''}><span>${l}<span class="c-sub">${desc[k]}</span></span></label>`).join('')}
-    </div>
+      ${ks.map((k) => `<label class="check"><input type="checkbox" data-qt="${k}" ${S.quizTypes.includes(k) ? 'checked' : ''}><span>${TYPES[k]}<span class="c-sub">${TYPE_HINT[k]}</span></span></label>`).join('')}
+    </div>`).join('')}
     <h2 class="group-title">題數</h2>
     <div class="group"><div class="set"><span class="s-label">每次出幾題</span><div class="seg" role="group" aria-label="題數">${counts.map((c) => `<button data-qc="${c}" aria-pressed="${S.quizCount === c}">${c || '全部'}</button>`).join('')}</div></div></div>
     <div class="dock"><div class="dock-inner"><button class="pill" data-quiz-start ${n && S.quizTypes.length ? '' : 'disabled'}>開始測驗</button></div></div>`;
@@ -473,6 +480,32 @@ function startQuiz(cards, label, meta = {}) {
 }
 
 /* ---------- 測驗進行 ---------- */
+const LISTEN = new Set(['aud', 'audz', 'exl', 'dict']);
+
+function spellHTML(q) {
+  const c = q.card;
+  const target = [...c.r];
+  const n = target.length;
+  const avail = Math.min(window.innerWidth, 560) - 36;
+  const size = Math.max(30, Math.min(50, Math.floor((avail - (n - 1) * 6) / n)));
+  const answered = q.answer != null;
+  const slots = target.map((want, k) => {
+    const ti = q.filled[k];
+    const ch = ti != null ? q.tiles[ti].ch : '';
+    let cls = 'slot' + (ch ? ' filled' : '');
+    if (answered) cls += ch === want ? ' ok' : ' ng';
+    return `<button class="${cls}" data-slot="${k}" ${answered || !ch ? 'disabled' : ''} style="--s:${size}px" lang="ja" aria-label="${ch ? `第 ${k + 1} 格 ${ch}，點一下拿回` : `第 ${k + 1} 格`}">${esc(ch)}</button>`;
+  }).join('');
+  const bank = q.tiles.map((t) => {
+    const used = q.filled.includes(t.i);
+    return `<button class="kana-tile${used ? ' used' : ''}" data-tile="${t.i}" ${used ? 'disabled aria-hidden="true"' : ''} lang="ja">${esc(t.ch)}</button>`;
+  }).join('');
+  return `<div class="spell">
+    <div class="slots" role="group" aria-label="拼出的讀音">${slots}</div>
+    ${answered ? '' : `<div class="bank" role="group" aria-label="假名方塊">${bank}</div>`}
+  </div>`;
+}
+
 function viewQuizRun() {
   if (!quiz) return location.replace('#/quiz');
   if (quiz.i >= quiz.list.length) return viewTerminal();
@@ -480,34 +513,55 @@ function viewQuizRun() {
   const c = q.card;
   setField(THEME[c.th]);
   const w = plain(c.w);
-  let prompt = '';
-  if (q.type === 'j2z') prompt = `<div class="word" lang="ja" style="--hw:${wordSize(w, 58)}px">${rubyHTML(c.w)}</div><div class="ask">選出中文意思</div>`;
-  else if (q.type === 'z2j') prompt = `<div class="zh">${esc(c.zh)}</div><div class="ask">選出日文</div>`;
-  else if (q.type === 'aud') prompt = `<button class="listen" data-say="${c.id}" data-part="w" aria-label="再聽一次">${I.speaker()}</button><div class="ask">聽發音，選出這個字</div>`;
-  else prompt = `<div class="word no-rt" lang="ja" style="--hw:${wordSize(w, 58)}px">${esc(w)}</div><div class="ask">選出正確讀音</div>`;
-
   const answered = q.answer != null;
-  const short = q.type === 'kan' || q.options.every((o) => (o.c ? plain(o.c.w).length <= 6 && o.c.zh.length <= 8 : true));
-  const tiles = q.options.map((o, k) => {
-    let text;
-    if (q.type === 'j2z') text = `<span>${esc(o.c.zh)}</span>`;
-    else if (q.type === 'kan') text = `<span>${esc(o.r)}</span>`;
-    else text = `<span class="ja" lang="ja">${rubyHTML(o.c.w)}</span>`;
-    let cls = q.type === 'kan' ? 'tile kana' : 'tile';
-    let mark = '';
-    if (answered) {
-      if (o.right) { cls += ' right'; mark = `<span class="mark">${I.check('')}</span>`; }
-      else if (q.picked === k) { cls += ' wrong'; mark = `<span class="mark">${I.cross('')}</span>`; }
-      else cls += ' dim';
-    }
-    return `<button class="${cls}" data-choice="${k}" ${answered ? 'disabled' : ''} ${q.type === 'kan' ? 'lang="ja"' : ''}>${text}${mark}</button>`;
-  }).join('');
-  const sheet = answered ? `<div class="sheet ${q.answer ? 'ok' : 'ng'}" role="status"><div class="sheet-inner">
-      <div class="sheet-head"><span class="verdict">${q.answer ? I.check('ico') : I.cross('ico')}${q.answer ? '答對了' : (q.picked < 0 ? '正確答案是' : '答錯了')}</span>
+  const listenBtn = (part, label) => `<button class="listen" data-say="${c.id}" data-part="${part}" aria-label="${label}">${I.speaker()}</button>`;
+  let prompt = '';
+  switch (q.type) {
+    case 'j2z': prompt = `<div class="word" lang="ja" style="--hw:${wordSize(w, 58)}px">${rubyHTML(c.w)}</div><div class="ask">選出中文意思</div>`; break;
+    case 'z2j': prompt = `<div class="zh">${esc(c.zh)}</div><div class="ask">選出日文</div>`; break;
+    case 'kan': prompt = `<div class="word no-rt" lang="ja" style="--hw:${wordSize(w, 58)}px">${esc(w)}</div><div class="ask">選出正確讀音</div>`; break;
+    case 'aud': prompt = `${listenBtn('w', '再聽一次')}<div class="ask">聽發音，選出這個字</div>`; break;
+    case 'audz': prompt = `${listenBtn('w', '再聽一次')}<div class="ask">聽發音，選出中文意思</div>`; break;
+    case 'exl': prompt = `${listenBtn('x', '再聽一次例句')}<div class="ask">聽例句，選出它的意思</div>`; break;
+    case 'dict': prompt = `${listenBtn('w', '再聽一次')}<div class="ask">聽發音，用假名方塊拼出來</div>`; break;
+    case 'spell':
+      prompt = /[\u3400-\u9fff]/.test(w)
+        ? `<div class="word no-rt" lang="ja" style="--hw:${wordSize(w, 54)}px">${esc(w)}</div><div class="zh-sub">${esc(c.zh)}</div><div class="ask">用假名方塊拼出讀音</div>`
+        : `<div class="zh">${esc(c.zh)}</div><div class="ask">用假名方塊拼出日文</div>`;
+      break;
+  }
+  let answerArea;
+  if (q.type === 'spell' || q.type === 'dict') {
+    answerArea = spellHTML(q);
+  } else {
+    const textOf = (o) => (q.type === 'kan' ? o.r : (q.type === 'j2z' || q.type === 'audz') ? o.c.zh : q.type === 'exl' ? o.c.exz : null);
+    const grid = q.type === 'kan' || (q.type !== 'exl' && q.options.every((o) => (o.c ? plain(o.c.w).length <= 6 && o.c.zh.length <= 8 : true)));
+    const tiles = q.options.map((o, k) => {
+      const t = textOf(o);
+      const text = t != null ? `<span>${esc(t)}</span>` : `<span class="ja" lang="ja">${rubyHTML(o.c.w)}</span>`;
+      let cls = q.type === 'kan' ? 'tile kana' : q.type === 'exl' ? 'tile long' : 'tile';
+      let mark = '';
+      if (answered) {
+        if (o.right) { cls += ' right'; mark = `<span class="mark">${I.check('')}</span>`; }
+        else if (q.picked === k) { cls += ' wrong'; mark = `<span class="mark">${I.cross('')}</span>`; }
+        else cls += ' dim';
+      }
+      return `<button class="${cls}" data-choice="${k}" ${answered ? 'disabled' : ''} ${q.type === 'kan' ? 'lang="ja"' : ''}>${text}${mark}</button>`;
+    }).join('');
+    answerArea = `<div class="tiles${grid ? ' grid' : ''}" role="group" aria-label="${TYPES[q.type]}">${tiles}</div>`;
+  }
+  let sheet = '';
+  if (answered) {
+    const extra = q.type === 'exl' && c.ex ? `<div class="sheet-ex" lang="ja">${rubyHTML(c.ex)}</div>` : '';
+    const verdict = q.answer ? '答對了' : q.picked === -1 ? '正確答案是' : '答錯了';
+    sheet = `<div class="sheet ${q.answer ? 'ok' : 'ng'}" role="status"><div class="sheet-inner">
+      <div class="sheet-head"><span class="verdict">${q.answer ? I.check('ico') : I.cross('ico')}${verdict}</span>
         <button class="star-inline" data-star="${c.id}" aria-pressed="${isStarred(c.id)}">${I.star('ico-s')}不熟</button></div>
       <div class="sheet-card"><span class="ja" lang="ja">${rubyHTML(c.w)}</span>${esc(c.zh)}</div>
+      ${extra}
       <button class="pill" data-quiz-next>${quiz.i === quiz.list.length - 1 ? '看結果' : '下一題'}</button>
-    </div></div>` : '';
+    </div></div>`;
+  }
   $app.innerHTML = `
     <div class="topbar">
       <button class="icon-btn" data-quiz-quit aria-label="結束測驗">${I.close()}</button>
@@ -516,26 +570,52 @@ function viewQuizRun() {
     </div>
     ${stopsHTML(quiz.list.length, quiz.i, (k) => { const a = quiz.list[k]; return a.answer == null ? '' : a.answer ? 'ok' : 'ng'; })}
     <div class="stage${lastDir ? ' from-' + lastDir : ''}">
+      <div class="q-kind">${LISTEN.has(q.type) ? '聽力' : q.type === 'spell' ? '拼音' : '看字'}・${TYPES[q.type]}</div>
       <div class="prompt">${prompt}</div>
-      <div class="tiles${short ? ' grid' : ''}" role="group" aria-label="${TYPES[q.type]}">${tiles}</div>
+      ${answerArea}
     </div>
     ${sheet}
     ${answered ? '' : '<div class="dock"><div class="dock-inner"><button class="pill ghost" data-quiz-skip>不知道</button></div></div>'}`;
   lastDir = '';
-  if (q.type === 'aud' && !answered && !q.autoplayed) {
+  if (LISTEN.has(q.type) && !answered && !q.autoplayed) {
     q.autoplayed = true;
-    play(c.id, 'w', $app.querySelector('.listen'));
+    play(c.id, q.type === 'exl' ? 'x' : 'w', $app.querySelector('.listen'));
   }
+}
+
+function finishAnswer(q, ok) {
+  q.answer = ok;
+  recordAnswer(q.card.id, ok);
+  viewQuizRun();
+  play(q.card.id, q.type === 'exl' ? 'x' : 'w'); // 答完念一次，把字音和字連起來
 }
 
 function answerQuiz(k) {
   const q = quiz.list[quiz.i];
   if (q.answer != null) return;
   q.picked = k;
-  q.answer = k >= 0 && q.options[k].right;
-  recordAnswer(q.card.id, q.answer);
+  if (q.type === 'spell' || q.type === 'dict') {
+    q.filled = [];
+    return finishAnswer(q, false);
+  }
+  finishAnswer(q, k >= 0 && q.options[k].right);
+}
+
+function spellTap(tileIdx, slotIdx) {
+  const q = quiz.list[quiz.i];
+  if (q.answer != null) return;
+  if (slotIdx != null) {
+    q.filled.splice(slotIdx, 1);
+  } else if (!q.filled.includes(tileIdx) && q.filled.length < [...q.card.r].length) {
+    q.filled.push(tileIdx);
+  }
+  const target = [...q.card.r];
+  if (q.filled.length === target.length) {
+    const built = q.filled.map((i) => q.tiles[i].ch).join('');
+    q.picked = built;
+    return finishAnswer(q, built === q.card.r);
+  }
   viewQuizRun();
-  play(q.card.id, 'w'); // 答完念一次，把字音和字連起來
 }
 
 function viewTerminal() {
@@ -648,10 +728,12 @@ function applyTheme() {
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click', async (e) => {
-  const el = e.target.closest('[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
+  const el = e.target.closest('[data-tile],[data-slot],[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-jump],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
   if (!el) return;
   const d = el.dataset;
 
+  if (d.tile !== undefined) { spellTap(+d.tile, null); return; }
+  if (d.slot !== undefined) { spellTap(null, +d.slot); return; }
   if (d.star !== undefined) {
     e.preventDefault(); e.stopPropagation();
     const on = toggleStar(d.star);
@@ -676,6 +758,7 @@ document.addEventListener('click', async (e) => {
   if (d.back !== undefined) { if (history.length > 1) history.back(); else go('#/browse'); return; }
   if (d.veil !== undefined) { el.classList.remove('veiled'); return; }
   if (d.more !== undefined) { browse.shown += 120; renderResults(); return; }
+  if (d.jump !== undefined) { e.preventDefault(); document.getElementById(`tier-${d.jump}`).scrollIntoView({ block: 'start' }); return; }
   if (d.fTier !== undefined) { browse.tier = +d.fTier; browse.shown = 80; viewBrowse(); return; }
   if (d.fTh !== undefined) { browse.th = d.fTh; browse.shown = 80; viewBrowse(); return; }
   if (d.fStar !== undefined) { browse.star = !browse.star; browse.shown = 80; viewBrowse(); return; }
