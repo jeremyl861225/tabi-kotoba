@@ -150,6 +150,16 @@ def theme_list():
 
 THEME_IDS = [t[0] for t in THEMES]
 
+# 首頁的主題家族分類（2026-09-25 使用者要求：首頁改依主題分類、以顏色區分）；
+# 每個家族用色票主色（ASSIGN 裡 role 是 M 的主題）當代表色
+FAMILY_NAMES = [("basic", "基本"), ("move", "交通"), ("stay", "住宿"), ("food", "飲食"), ("shop", "購物"),
+                ("care", "醫療緊急"), ("city", "觀光生活"), ("listen", "店員廣播")]
+
+
+def family_list():
+    rep = {fam: tid for tid, (fam, role) in ASSIGN.items() if role == "M"}
+    return [{"id": f, "name": n, "rep": rep[f]} for f, n in FAMILY_NAMES]
+
 if __name__ == "__main__":
     for t in theme_list():
         print(t["id"], t["family"], "field", t["field"], "on", t["on"], t["on2"], "paper", t["paper"], "ink", t["ink"], "| lL", t["lL"], "lD", t["lD"])

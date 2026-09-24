@@ -37,6 +37,23 @@ def main():
         n_units = pg.eval_on_selector_all(".stn", "els => els.length")
         check(n_units == len(data["units"]), f"首頁課數 {n_units} ≠ {len(data['units'])}")
 
+        # 課名全 App 不重複；主題家族篩選；三條線可收合
+        titles = [u["title"] for u in data["units"]]
+        check(len(set(titles)) == len(titles), f"課名有重複：{[t for t in set(titles) if titles.count(t) > 1][:5]}")
+        fam_of = {t["id"]: t["family"] for t in data["themes"]}
+        for f in data.get("families", [])[:3]:
+            want = sum(1 for u in data["units"] if fam_of[u["th"]] == f["id"])
+            pg.click(f".fam[data-fam='{f['id']}']")
+            pg.wait_for_timeout(120)
+            got = pg.eval_on_selector_all(".stn", "els => els.length")
+            check(got == want, f"主題家族「{f['name']}」篩選後 {got} 站，應為 {want}")
+        pg.click(".fam[data-fam='']")
+        pg.wait_for_timeout(120)
+        was = pg.eval_on_selector("details.tier", "e => e.open")
+        pg.click("details.tier > summary")
+        pg.wait_for_timeout(120)
+        check(pg.eval_on_selector("details.tier", "e => e.open") != was, "點線的標題列沒有收合／展開")
+
         # 每張卡：沒有橫向溢出、假名數量正確
         sample = cards if ALL else cards[:: max(1, len(cards) // 120)]
         t0 = time.time()

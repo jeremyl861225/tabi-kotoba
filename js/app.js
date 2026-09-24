@@ -29,6 +29,7 @@ const I = {
   check: (c = 'ico-s') => svg('<path d="M5 12.5l4.5 4.5L19 7.5"/>', c, 'stroke-width="3"'),
   cross: (c = 'ico-s') => svg('<path d="M7 7l10 10M17 7L7 17"/>', c, 'stroke-width="3"'),
   go: () => svg('<path d="M5 12h13M13 6l6 6-6 6"/>', 'ico-s'),
+  chev: () => svg('<path d="M6 9l6 6 6-6"/>', 'chev'),
 };
 const stars = (t) => `<span class="stars" role="img" aria-label="${4 - t} 顆星">${I.starFill().repeat(4 - t)}</span>`;
 
@@ -148,6 +149,18 @@ function onNav() {
   window.scrollTo(0, 0);
 }
 window.addEventListener('popstate', onNav);
+// 首頁三條線的收合：只記使用者自己點的（畫面產生時的 open 不算）
+document.addEventListener('click', (e) => {
+  const sm = e.target.closest && e.target.closest('details.tier > summary');
+  if (!sm) return;
+  const el = sm.parentElement;
+  setTimeout(() => {
+    store.home = store.home || { fam: '', open: {} };
+    store.home.open = store.home.open || {};
+    store.home.open[el.dataset.tier] = el.open;
+    save();
+  }, 0);
+});
 window.addEventListener('hashchange', onNav);
 
 function updateBadge() {
@@ -157,12 +170,37 @@ function updateBadge() {
 }
 
 /* ---------- 首頁：路線圖 ---------- */
-function nextUnit() {
-  return UNITS.find((u) => !unitRec(u.id).done) || UNITS[UNITS.length - 1];
+const famOf = (u) => THEME[u.th].family;
+// 首頁目前看的範圍：全部，或某個主題家族
+function homePool() {
+  const f = store.home && store.home.fam;
+  return f && (DATA.families || []).some((x) => x.id === f) ? UNITS.filter((u) => famOf(u) === f) : UNITS;
+}
+
+function nextUnit(list = UNITS) {
+  return list.find((u) => !unitRec(u.id).done) || list[list.length - 1];
+}
+
+function stationRow(u, nu) {
+  const r = unitRec(u.id);
+  const seen = u.cards.filter((id) => store.seen[id]).length;
+  const state = r.done ? 'done' : u.id === nu.id ? 'cur' : seen ? 'going' : '';
+  const th = THEME[u.th].name;
+  return `<li class="${state}" style="${strokeVars(THEME[u.th])}"><a class="stn" href="#/unit/${u.id}" aria-label="${stationName(u)}：${esc(u.title)}${u.title === th ? '' : `（${esc(th)}）`}，已學 ${seen}／${u.cards.length}${r.done ? '，已到着' : ''}">
+    <span class="stn-dot" aria-hidden="true">${r.done ? I.check('') : ''}</span>
+    <span class="stn-main">
+      <span class="stn-name">${esc(u.title)}</span>
+      <span class="stn-sub"><span class="stn-no">${TIER[u.t].name[0]}${String(u.sn).padStart(2, '0')}</span>${u.title === th ? '' : `<span>${esc(th)}</span>`}<span>${u.cards.length} 字${seen && !r.done ? `，已學 ${seen}` : ''}</span></span>
+      ${seen && !r.done ? `<span class="stn-bar"><i style="--p:${(seen / u.cards.length).toFixed(3)}"></i></span>` : ''}
+    </span>
+    <span class="stn-meta">${r.done ? '<b class="arrived">到着</b>' : ''}${r.best != null ? `<span>測驗 ${r.best}/${r.total}</span>` : ''}</span>
+  </a></li>`;
 }
 
 function viewHome() {
-  const nu = nextUnit();
+  const fam = homePool() === UNITS ? '' : store.home.fam;
+  const pool = homePool();
+  const nu = nextUnit(pool);
   const rec = unitRec(nu.id);
   const seenCount = CARDS.filter((c) => store.seen[c.id]).length;
   const doneUnits = UNITS.filter((u) => unitRec(u.id).done).length;
@@ -171,27 +209,24 @@ function viewHome() {
   const firstCard = BYID[nu.cards[pos]];
   const nuSeen = nu.cards.filter((id) => store.seen[id]).length;
 
+  // 主題家族：全部＋八個家族，3×3；色點是該家族色票的主色
+  const fams = [{ id: '', name: '全部', rep: null }, ...(DATA.families || [])].map((f) => {
+    const us = f.id ? UNITS.filter((u) => famOf(u) === f.id) : UNITS;
+    const d = us.filter((u) => unitRec(u.id).done).length;
+    return `<button class="fam" data-fam="${f.id}" aria-pressed="${fam === f.id}"${f.rep ? ` style="${strokeVars(THEME[f.rep])}"` : ''}><b>${f.name}</b><span>${d}／${us.length} 站</span></button>`;
+  }).join('');
+
+  // 三條線可收合；沒動過的話只展開下一站所在的那條
+  const open = (store.home && store.home.open) || {};
   const tiers = DATA.tiers.map((tier) => {
-    const us = UNITS.filter((u) => u.t === tier.id);
+    const us = pool.filter((u) => u.t === tier.id);
+    if (!us.length) return '';
     const done = us.filter((u) => unitRec(u.id).done).length;
-    const rows = us.map((u) => {
-      const r = unitRec(u.id);
-      const seen = u.cards.filter((id) => store.seen[id]).length;
-      const state = r.done ? 'done' : u.id === nu.id ? 'cur' : seen ? 'going' : '';
-      return `<li class="${state}" style="${strokeVars(THEME[u.th])}"><a class="stn" href="#/unit/${u.id}" aria-label="${stationName(u)}：${esc(u.title)}，已學 ${seen}／${u.cards.length}${r.done ? '，已到着' : ''}">
-        <span class="stn-dot" aria-hidden="true">${r.done ? I.check('') : ''}</span>
-        <span class="stn-main">
-          <span class="stn-name">${esc(u.title)}</span>
-          <span class="stn-sub"><span class="stn-no">${TIER[u.t].name[0]}${String(u.sn).padStart(2, '0')}</span>${u.cards.length} 個單字${seen && !r.done ? `，已學 ${seen}` : ''}</span>
-          ${seen && !r.done ? `<span class="stn-bar"><i style="--p:${(seen / u.cards.length).toFixed(3)}"></i></span>` : ''}
-        </span>
-        <span class="stn-meta">${r.done ? '<b class="arrived">到着</b>' : ''}${r.best != null ? `<span>測驗 ${r.best}/${r.total}</span>` : ''}</span>
-      </a></li>`;
-    }).join('');
-    return `<section class="tier" aria-labelledby="tier-${tier.id}">
-      <div class="tier-head"><h2 id="tier-${tier.id}">${tier.name}線</h2>${stars(tier.id)}<span class="tier-n">${done}／${us.length} 站到着</span></div>
-      <ol class="route">${rows}</ol>
-    </section>`;
+    const isOpen = open[tier.id] !== undefined ? open[tier.id] : tier.id === nu.t;
+    return `<details class="tier" data-tier="${tier.id}"${isOpen ? ' open' : ''}>
+      <summary class="tier-head"><h2 id="tier-${tier.id}">${tier.name}線</h2>${stars(tier.id)}<span class="tier-n">${done}／${us.length} 站到着</span>${I.chev()}</summary>
+      <ol class="route">${us.map((u) => stationRow(u, nu)).join('')}</ol>
+    </details>`;
   }).join('');
 
   $app.innerHTML = `
@@ -200,15 +235,11 @@ function viewHome() {
       <p class="home-status">已學 <b>${seenCount}</b>／${CARDS.length} 字，到着 <b>${doneUnits}</b>／${UNITS.length} 站${starCount ? `，<a href="#/starred">不熟 <b>${starCount}</b> 字</a>` : ''}</p>
     </header>
     <a class="next" href="#/learn/${nu.id}/${pos}" data-autoplay style="${fieldVars(THEME[nu.th])}">
-      <div class="next-head">${unitBadge(nu)}<div><h2>${esc(nu.title)}</h2><p>下一站：${stationName(nu)}</p></div></div>
+      <div class="next-head">${unitBadge(nu)}<div><h2>${esc(nu.title)}</h2><p>下一站：${stationName(nu)}${nu.title === THEME[nu.th].name ? '' : `，${esc(THEME[nu.th].name)}`}</p></div></div>
       ${segsHTML(nu.cards.length, pos, (i) => (store.seen[nu.cards[i]] ? 'done' : ''))}
       <div class="next-foot"><span class="n">${nuSeen ? `已學 ${nuSeen}／${nu.cards.length} 字，從 <span lang="ja">${esc(plain(firstCard.w))}</span> 繼續` : `${nu.cards.length} 個單字，第一個是 <span lang="ja">${esc(plain(firstCard.w))}</span>`}</span><span class="next-go">${pos ? '繼續' : '出發'}${I.go()}</span></div>
     </a>
-    <nav class="jump" aria-label="跳到等級">${DATA.tiers.map((t) => {
-      const us = UNITS.filter((u) => u.t === t.id);
-      const d = us.filter((u) => unitRec(u.id).done).length;
-      return `<a href="#tier-${t.id}" data-jump="${t.id}"><b>${t.name}線</b><span>${d}／${us.length} 站</span></a>`;
-    }).join('')}</nav>
+    <div class="fams" role="group" aria-label="依主題分類">${fams}</div>
     ${tiers}`;
 }
 
@@ -230,7 +261,7 @@ function viewUnit(uid) {
   }).join('');
   $app.innerHTML = `
     <div class="topbar"><a class="icon-btn" href="#/" aria-label="回路線圖">${I.back()}</a><span class="title">${TIER[u.t].name}線</span></div>
-    <div class="unit-head">${unitBadge(u)}<div><h1>${esc(u.title)}</h1><p>${stationName(u)}，${u.cards.length} 個單字${seen ? `，已學 ${seen}` : ''}${rec.best != null ? `，測驗最佳 ${rec.best}/${rec.total}` : ''}</p></div></div>
+    <div class="unit-head">${unitBadge(u)}<div><h1>${esc(u.title)}</h1><p>${u.title === t.name ? '' : `${esc(t.name)}，`}${stationName(u)}，${u.cards.length} 個單字${seen ? `，已學 ${seen}` : ''}${rec.best != null ? `，測驗最佳 ${rec.best}/${rec.total}` : ''}</p></div></div>
     ${segsHTML(u.cards.length, -1, (i) => (store.seen[u.cards[i]] ? 'done' : ''))}
     <div class="list">${list}</div>
     <div class="dock"><div class="dock-inner">
@@ -305,7 +336,7 @@ function viewArrive(u) {
   rec.pos = 0;
   save();
   setField(THEME[u.th]);
-  const nu = nextUnit();
+  const nu = nextUnit(homePool());
   lastStop = null;
   $app.innerHTML = `
     <div class="topbar"><a class="icon-btn" href="#/unit/${u.id}" aria-label="回路線">${I.back()}</a><span class="title">${esc(u.title)}</span></div>
@@ -491,7 +522,7 @@ function viewQuizSetup() {
   let sub = '';
   if (quizSetup.scope === 'tier') sub = `<div class="wrap">${DATA.tiers.map((t) => `<button class="chip" data-qs-tier="${t.id}" aria-pressed="${quizSetup.tier === t.id}">${t.name}</button>`).join('')}</div>`;
   if (quizSetup.scope === 'theme') sub = `<div class="wrap">${DATA.themes.map((t) => `<button class="chip" data-qs-th="${t.id}" aria-pressed="${(quizSetup.th || DATA.themes[0].id) === t.id}" style="${fieldVars(t)}"><span class="dot"></span>${esc(t.name)}</button>`).join('')}</div>`;
-  if (quizSetup.scope === 'unit') sub = `<div class="wrap"><select id="qs-unit" class="chip" style="width:100%;height:46px" aria-label="選擇單元">${DATA.tiers.map((t) => `<optgroup label="${t.name}">${UNITS.filter((u) => u.t === t.id).map((u) => `<option value="${u.id}"${quizSetup.unit === u.id ? ' selected' : ''}>${esc(u.title)}</option>`).join('')}</optgroup>`).join('')}</select></div>`;
+  if (quizSetup.scope === 'unit') sub = `<div class="wrap"><select id="qs-unit" class="chip" style="width:100%;height:46px" aria-label="選擇單元">${DATA.tiers.map((t) => `<optgroup label="${t.name}">${UNITS.filter((u) => u.t === t.id).map((u) => `<option value="${u.id}"${quizSetup.unit === u.id ? ' selected' : ''}>${esc(u.title)}（${esc(THEME[u.th].name)}）</option>`).join('')}</optgroup>`).join('')}</select></div>`;
   const n = scopeCards().length;
   const counts = [10, 20, 30, 0];
   $app.innerHTML = `
@@ -771,7 +802,7 @@ function applyTheme() {
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click', async (e) => {
-  const el = e.target.closest('[data-tts],[data-tile],[data-slot],[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-jump],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
+  const el = e.target.closest('[data-tts],[data-tile],[data-slot],[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-jump],[data-fam],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
   if (!el) return;
   const d = el.dataset;
 
@@ -802,6 +833,7 @@ document.addEventListener('click', async (e) => {
   if (d.back !== undefined) { if (history.length > 1) history.back(); else go('#/browse'); return; }
   if (d.veil !== undefined) { el.classList.remove('veiled'); return; }
   if (d.more !== undefined) { browse.shown += 120; renderResults(); return; }
+  if (d.fam !== undefined) { store.home = store.home || { fam: '', open: {} }; store.home.fam = d.fam; save(); const y = window.scrollY; viewHome(); window.scrollTo(0, y); return; }
   if (d.jump !== undefined) { e.preventDefault(); document.getElementById(`tier-${d.jump}`).scrollIntoView({ block: 'start' }); return; }
   if (d.fTier !== undefined) { browse.tier = +d.fTier; browse.shown = 80; viewBrowse(); return; }
   if (d.fTh !== undefined) { browse.th = d.fTh; browse.shown = 80; viewBrowse(); return; }

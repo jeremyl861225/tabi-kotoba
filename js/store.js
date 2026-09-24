@@ -22,6 +22,7 @@ function fresh() {
     stats: {},          // id -> [答對, 答錯, 最後作答時間]
     units: {},          // unitId -> { best, total, pos, done }
     lastUnit: null,
+    home: { fam: '', open: {} },  // 首頁：只看哪個主題家族、各條線展開與否
     settings: { ...DEFAULT_SETTINGS },
   };
 }

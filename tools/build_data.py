@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "pip
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
 from rubytools import word_ruby, plain, reading, segments, uncovered_kanji, check_sentence, tts_text, romaji_for, RUBY_RE
-from themes import theme_list
+from themes import theme_list, family_list
 import opencc
 
 TIERS = [{"id": 1, "name": "必備"}, {"id": 2, "name": "常用"}, {"id": 3, "name": "進階"}]
@@ -165,14 +165,23 @@ def main():
         if len(plain(ex)) > 40:
             qa["long_example"].append([c["id"], plain(ex)])
 
-    # 單元標題
+    # 課名：build/unit_names.json（每課的子題名稱，全 App 不重複）；沒有的話退回「主題＋編號」
+    #（2026-09-25 使用者反映「寒暄與應答 1、2」在三條線重複出現）。select 重跑、課的組成變了要重新命名。
+    np_ = os.path.join(BUILD, "unit_names.json")
+    names = json.load(open(np_, encoding="utf-8")) if os.path.exists(np_) else {}
     units = []
     for u in sel["units"]:
         ids = [x for x in u["cards"] if x not in dropped]
         if not ids:
             continue
-        title = tname[u["th"]] + (f" {u['part']}" if u["parts"] > 1 else "")
+        title = names.get(u["id"]) or tname[u["th"]] + (f" {u['part']}" if u["parts"] > 1 else "")
         units.append({**u, "cards": ids, "title": title})
+    missing = [u["id"] for u in units if u["id"] not in names]
+    if names and missing:
+        qa["unit_name_missing"] = missing
+    dup = [t for t, n in collections.Counter(u["title"] for u in units).items() if n > 1]
+    if dup:
+        qa["unit_title_duplicate"] = dup
 
     # 來源清單與音檔大小
     srcs = json.load(open(os.path.join(BUILD, "sources_meta.json"), encoding="utf-8"))
@@ -187,7 +196,7 @@ def main():
         "meta": {"version": datetime.date.today().isoformat(), "count": len(cards),
                  "sources": [{"id": s["id"], "title": s["title"], "url": s["url"], "lang": s["lang"]} for s in srcs],
                  "audioBytes": dict(audio_bytes)},
-        "tiers": TIERS, "themes": themes, "units": units, "cards": cards,
+        "tiers": TIERS, "themes": themes, "families": family_list(), "units": units, "cards": cards,
     }
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     json.dump(data, open(os.path.join(root, "data", "cards.json"), "w", encoding="utf-8"), ensure_ascii=False, separators=(",", ":"))
