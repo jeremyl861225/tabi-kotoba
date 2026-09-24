@@ -13,12 +13,11 @@ TEXT = "旅行"
 GROUND = (0xF5, 0xEF, 0xE3)   # 米色底
 INK = (0x1C, 0x18, 0x14)      # 墨色：字與實心站點
 LINE = (0x9C, 0x53, 0x4C)     # 朱赭（緊急・求助那組色票的主色）
-LIFT = 0.03                   # 整組比正中間再往上移（畫布高的比例）：幾何置中看起來偏下（2026-09-25 使用者要求「再上移一點」）
 
 
 def draw(size, scale=1.0):
-    """先把字與路線畫在透明圖層，量出實際筆畫範圍後整組置中（左右等寬），再依 LIFT 往上移一點
-    （2026-09-25 使用者先要求上下界等寬，再要求整組上移一點）"""
+    """先把字與路線畫在透明圖層，量出實際筆畫範圍後整組置中：上下留白等寬、左右留白等寬
+    （2026-09-25 使用者要求上下界等寬；原本字的位置是目測，上方留白比下方多約一半）"""
     S = 1024
     k = scale
     layer = Image.new("RGBA", (S, S), (0, 0, 0, 0))
@@ -42,7 +41,7 @@ def draw(size, scale=1.0):
             d.ellipse([x - r, y - r, x + r, y + r], fill=GROUND + (255,), outline=LINE + (255,), width=int(16 * k))
     group = layer.crop(layer.getbbox())
     img = Image.new("RGB", (S, S), GROUND)
-    img.paste(group, ((S - group.width) // 2, (S - group.height) // 2 - int(S * LIFT * k)), group)
+    img.paste(group, ((S - group.width) // 2, (S - group.height) // 2), group)
     return img.resize((size, size), Image.LANCZOS)
 
 
