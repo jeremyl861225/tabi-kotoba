@@ -16,7 +16,7 @@ TIERS = [{"id": 1, "name": "必備"}, {"id": 2, "name": "常用"}, {"id": 3, "na
 jp2t = opencc.OpenCC("jp2t")
 s2tw = opencc.OpenCC("s2tw")
 # 台灣常用、OpenCC 卻會轉成「臺／隻／註」的字，不算簡體
-TW_OK = set("台只注")
+TW_OK = set("台只注念游")   # opencc 在台灣用法上的誤報：懷念→懷唸、游了泳→遊了泳
 
 
 def odd_chars(s):
@@ -111,6 +111,9 @@ def head_in_example(head, ex, read=""):
         return True
     if re.search(r"[〜～]", head) and pattern_in_example(head, p):
         return True
+    # サ變動詞（コピーする → コピーして）
+    if h.endswith("する") and len(h) > 3 and h[:-2] in p:
+        return True
     # 假名／漢字寫法不同（りっぱ → 立派、にぎやか → 賑やか）：比讀音
     if read and len(read) >= 3:
         rp = kata2hira(reading(ex))
@@ -144,6 +147,9 @@ def main():
     # 逐張確認過的讀音誤報（分析器唸錯、卡片是對的）：[卡片編號, 漢字, 標的讀音]
     okp = os.path.join(BUILD, "author", "reading_ok.json")
     reading_ok = {tuple(x) for x in json.load(open(okp, encoding="utf-8"))} if os.path.exists(okp) else set()
+    # 逐張確認過「例句有用到」的誤報（句型活用後字面對不上：〜なければならない → なければなりません）：[卡片編號]
+    exp_ = os.path.join(BUILD, "author", "example_ok.json")
+    example_ok = set(json.load(open(exp_, encoding="utf-8"))) if os.path.exists(exp_) else set()
     themes = theme_list()
     tname = {t["id"]: t["name"] for t in themes}
 
@@ -204,7 +210,7 @@ def main():
         bad = [b for b in check_sentence(ex) if (c["id"], b[0], b[1]) not in reading_ok and ("*", b[0], b[1]) not in reading_ok]
         if bad:
             qa["reading_mismatch"].append([c["id"], ex, [list(b) for b in bad]])
-        if kind != "p" and not head_in_example(head, ex, read):
+        if kind != "p" and c["id"] not in example_ok and not head_in_example(head, ex, read):
             qa["head_not_in_example"].append([c["id"], head, plain(ex)])
         if len(plain(ex)) > 40:
             qa["long_example"].append([c["id"], plain(ex)])
