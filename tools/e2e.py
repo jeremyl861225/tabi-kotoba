@@ -100,7 +100,10 @@ def main():
         check(sqs == list(range(1, len(cards) + 1)), "單字編號不是 1..N 連續不重複")
         pick = next(c for c in cards if c.get("sq") == 1)
         pg.fill("#q", "0001")
-        pg.wait_for_timeout(150)
+        try:   # 等結果換成編號搜尋（機器忙的時候 150ms 不夠，會讀到上一個搜尋的結果）
+            pg.wait_for_function(f"(() => {{ const r = [...document.querySelectorAll('.row')].map(e => e.getAttribute('href')); return r.length === 1 && r[0] === '#/card/{pick['id']}'; }})()", timeout=3000)
+        except Exception:
+            pass
         ids = pg.eval_on_selector_all(".row", "els => els.map(e => e.getAttribute('href'))")
         check(ids == [f"#/card/{pick['id']}"], f"搜尋編號 0001 應只找到 {pick['id']}，實際 {ids[:3]}")
         pg.fill("#q", "")
@@ -115,6 +118,41 @@ def main():
         x1 = pg.evaluate("document.querySelectorAll('.chips')[1].scrollLeft")
         check(x0 > 0 and abs(x1 - x0) < 40, f"點主題標籤後標籤列跳動：{x0} → {x1}")
         pg.click("[data-f-th='']")
+
+        # 字典（字卡以外的字）：點得開、有釋義、發音鍵會去抓預錄音檔（2026-09-25 使用者：點不開、沒聲音、不要英文）
+        dict_entries = json.load(open(os.path.join(ROOT, "data", "dict.json"), encoding="utf-8"))["entries"]
+        forms = {x for c in cards for x in (c["r"], c["w"])}
+        de = next(e for e in dict_entries if e.get("z") and e["r"][0] not in forms and len(e["r"][0]) >= 4) if any(e.get("z") for e in dict_entries) \
+            else next(e for e in dict_entries if e["r"][0] not in forms and len(e["r"][0]) >= 4)
+        audio_reqs = []
+        pg.on("request", lambda r: audio_reqs.append(r.url) if "/audio/d/" in r.url else None)
+        pg.fill("#q", de["r"][0])
+        pg.wait_for_selector(f".drow a[href='#/dict/{de['i']}']", timeout=8000)
+        pg.click(f".drow a[href='#/dict/{de['i']}']")
+        pg.wait_for_selector(".dict-card .d-senses li")
+        check(pg.eval_on_selector_all(".dict-card .d-senses li", "els => els.length") >= 1, "字典詞頁沒有釋義")
+        if de.get("z"):
+            check(pg.get_attribute(".dict-card .d-senses", "lang") is None, "有中文釋義卻顯示英文")
+        pg.click(".dict-card [data-dsay]")
+        pg.wait_for_timeout(400)
+        check(any(u_.endswith(f"/audio/d/{de['i']}.mp3") for u_ in audio_reqs), f"字典發音沒有去抓 audio/d/{de['i']}.mp3")
+        pg.go_back()
+        pg.wait_for_selector("#q")
+        pg.fill("#q", "")
+        pg.wait_for_timeout(150)
+
+        # 課程頁的進度：學過的字打勾、目前這一個標「目前」（2026-09-25 使用者：要看得出這一站學到哪裡）
+        u = data["units"][0]
+        for i in range(3):
+            pg.goto(BASE + f"#/learn/{u['id']}/{i}")
+            pg.wait_for_selector(".card .word")
+        pg.goto(BASE + f"#/unit/{u['id']}")
+        pg.wait_for_selector(".word-row")
+        n_seen = pg.eval_on_selector_all(".word-row.seen", "els => els.length")
+        cur = pg.eval_on_selector_all(".word-row.cur", "els => els.map(e => e.getAttribute('href'))")
+        check(n_seen >= 3, f"課程頁學過的字沒有標出來（{n_seen}）")
+        check(len(cur) == 1 and cur[0].endswith("/2"), f"課程頁的「目前」位置不對：{cur}")
+        check("目前" in pg.inner_text(".word-row.cur"), "課程頁沒有「目前」標示")
 
         # 測驗：第一課全部作答到終點
         u = data["units"][0]

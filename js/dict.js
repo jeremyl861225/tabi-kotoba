@@ -1,4 +1,5 @@
-// 離線字典：JMdict 常用詞（約 2.2 萬詞，英文釋義），補字卡以外的字。第一次查詢時才載入。
+// 離線字典：JMdict 常用詞（約 2.3 萬詞），補字卡以外的字。第一次查詢時才載入。
+// 顯示中文釋義（z，代理翻譯）；英文釋義（g）只留著給英文查詢用（2026-09-25 使用者：只要中文）。
 import { toHira } from './ruby.js';
 
 let DICT = null;
@@ -81,6 +82,13 @@ export function loadDict() {
 
 export const dictReady = () => !!DICT;
 
+let BYI = null;
+export function dictEntry(i) {
+  if (!DICT) return null;
+  if (!BYI) BYI = new Map(DICT.map((e) => [e.i, e]));
+  return BYI.get(String(i)) || null;
+}
+
 // 回傳 [{e, score}]，score 越小越前面；exclude 是已經有字卡的寫法與讀音
 export function searchDict(query, exclude, limit = 30) {
   if (!DICT) return [];
@@ -90,6 +98,7 @@ export function searchDict(query, exclude, limit = 30) {
   const hira = ascii ? romaToHira(q.replace(/\s+/g, '')) : toHira(q.normalize('NFKC'));
   const hc = hira ? collapse(hira) : null;
   const eng = ascii ? q.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').trim() : null;
+  const zhQ = !ascii && !/[ぁ-ゖァ-ヺー]/.test(q);   // 沒有假名：也可能是用中文查
   const out = [];
   for (const e of DICT) {
     if ((e.k && e.k.some((k) => exclude.has(k))) || e._r.some((r) => exclude.has(r))) continue;
@@ -100,6 +109,8 @@ export function searchDict(query, exclude, limit = 30) {
       else if (e.k && e.k.some((k) => k.startsWith(q))) score = 1;
       else if (hira && e._r.some((r) => r.startsWith(hira))) score = 1;
       else if (e.k && q.length >= 2 && e.k.some((k) => k.includes(q))) score = 2;
+      else if (zhQ && e.z && e.z.split('；').some((z) => z.replace(/（.*?）/g, '') === q)) score = 3;
+      else if (zhQ && q.length >= 2 && e.z && e.z.includes(q)) score = 4;
     } else {
       if (hira && hira.length >= 2) {
         if (e._r.includes(hira) || e._rc.includes(hc)) score = 0;

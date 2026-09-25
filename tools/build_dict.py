@@ -1,4 +1,4 @@
-"""離線字典：從 JMdict 常用詞版（jmdict-eng-common，約 2.2 萬詞）抽出寫法、讀音、詞性、英文釋義，
+"""離線字典：從 JMdict 常用詞版（jmdict-eng-common，約 2.2 萬詞）抽出寫法、讀音、詞性、英文釋義（搜尋用）與中文釋義（顯示用），
 輸出 data/dict.json 給 App 查字卡以外的字。資料授權 CC BY-SA 4.0（EDRDG），衍生檔沿用同授權。
 """
 import json, os, glob
@@ -22,8 +22,20 @@ def pos_label(codes):
     return ""
 
 
+def load_zh():
+    """代理翻好的中文釋義：build/dictzh/out-NN.tsv（jmid<TAB>中文），見 pipeline/dict_zh_prep.py"""
+    zh = {}
+    for f in sorted(glob.glob(os.path.join(WORK, "build", "dictzh", "out-*.tsv"))):
+        for ln in open(f, encoding="utf-8"):
+            p = ln.rstrip("\n").split("\t")
+            if len(p) >= 2 and p[1].strip():
+                zh[p[0].strip()] = p[1].strip()
+    return zh
+
+
 def main():
     data = json.load(open(SRC, encoding="utf-8"))
+    zh = load_zh()
     out = []
     for w in data["words"]:
         kanji = [k["text"] for k in w["kanji"] if k.get("common")] or [k["text"] for k in w["kanji"]][:1]
@@ -38,7 +50,10 @@ def main():
         gloss = "; ".join(gl)
         if len(gloss) > 90:
             gloss = gloss[:88].rsplit(",", 1)[0] + "…"
-        e = {"k": kanji[:2], "r": kana[:2], "g": gloss, "p": pos_label(senses[0].get("partOfSpeech", []) if senses else [])}
+        # i：JMdict 編號（音檔 audio/d/<i>.mp3 用它，重建字典也不會變）；z：中文釋義（2026-09-25 使用者：字典只列中文）
+        e = {"i": w["id"], "k": kanji[:2], "r": kana[:2], "g": gloss, "p": pos_label(senses[0].get("partOfSpeech", []) if senses else [])}
+        if w["id"] in zh:
+            e["z"] = zh[w["id"]]
         if uk:
             e["u"] = 1  # 平常寫假名
         if not e["k"]:
@@ -47,7 +62,7 @@ def main():
     dst = os.path.join(ROOT, "data", "dict.json")
     json.dump({"source": "JMdict (EDRDG), CC BY-SA 4.0, common entries", "entries": out}, open(dst, "w", encoding="utf-8"),
               ensure_ascii=False, separators=(",", ":"))
-    print(f"{len(out)} 詞 → data/dict.json（{os.path.getsize(dst) / 1024:.0f} KB）")
+    print(f"{len(out)} 詞 → data/dict.json（{os.path.getsize(dst) / 1024:.0f} KB），中文釋義 {sum(1 for e in out if 'z' in e)} 詞")
 
 
 if __name__ == "__main__":

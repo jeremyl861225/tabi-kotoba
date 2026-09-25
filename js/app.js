@@ -1,9 +1,9 @@
 // 旅ことば — 主程式：路由與各畫面（Drops × 路線圖）
 import { store, save, isStarred, toggleStar, markSeen, recordAnswer, unitRec, exportBackup, importBackup, resetAll } from './store.js';
-import { play, stop, nextVoice, voiceName, audioUrl, cachedSet, downloadAudio } from './audio.js';
+import { play, playFile, stop, nextVoice, voiceName, audioUrl, cachedSet, downloadAudio } from './audio.js';
 import { rubyHTML, plain, esc, toHira, normQuery, romaKey, isAscii } from './ruby.js';
 import { buildQuiz, TYPES, TYPE_HINT, TYPE_GROUPS } from './quiz.js';
-import { loadDict, searchDict, dictReady } from './dict.js';
+import { loadDict, searchDict, dictReady, dictEntry } from './dict.js';
 
 const $app = document.getElementById('app');
 const $meta = document.querySelector('meta[name="theme-color"]') || (() => {
@@ -110,14 +110,15 @@ const routes = [
   [/^unit\/([\w-]+)$/, viewUnit],
   [/^learn\/([\w-]+)\/(\d+|done)$/, viewLearn],
   [/^card\/(\w+)$/, viewCard],
+  [/^dict\/(\d+)$/, viewDictEntry],
   [/^browse$/, viewBrowse],
   [/^quiz$/, viewQuizSetup],
   [/^quiz\/run$/, viewQuizRun],
   [/^starred$/, viewStarred],
   [/^settings$/, viewSettings],
 ];
-const TAB_OF = { '': 'home', unit: 'home', learn: 'home', card: 'browse', browse: 'browse', quiz: 'quiz', starred: 'starred', settings: 'settings' };
-const NO_TABBAR = new Set(['unit', 'learn', 'card', 'quiz/run']);
+const TAB_OF = { '': 'home', unit: 'home', learn: 'home', card: 'browse', dict: 'browse', browse: 'browse', quiz: 'quiz', starred: 'starred', settings: 'settings' };
+const NO_TABBAR = new Set(['unit', 'learn', 'card', 'dict', 'quiz/run']);
 
 function currentPath() { return location.hash.replace(/^#\/?/, ''); }
 
@@ -257,10 +258,14 @@ function viewUnit(uid) {
   setField(t);
   const rec = unitRec(uid);
   const seen = u.cards.filter((id) => store.seen[id]).length;
+  // 目前這一個＝「繼續學習」會打開的那張（還沒開始學就不標）
+  const cur = seen || rec.pos ? Math.min(rec.pos || 0, u.cards.length - 1) : -1;
   const list = u.cards.map((id, i) => {
     const c = BYID[id];
-    return `<a class="row word-row${store.seen[id] ? ' seen' : ''}" href="#/learn/${uid}/${i}" data-autoplay>
-      <span class="idx">${no4(c)}</span>
+    const on = store.seen[id];
+    return `<a class="row word-row${on ? ' seen' : ''}${i === cur ? ' cur' : ''}" href="#/learn/${uid}/${i}" data-autoplay${i === cur ? ' aria-current="step"' : ''}>
+      <span class="mk" aria-hidden="true">${on && i !== cur ? I.check('') : ''}</span>
+      <span class="idx">${no4(c)}${i === cur ? '<b class="cur-tag">目前</b>' : ''}${on ? '<span class="sr-only">已學</span>' : ''}</span>
       <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh">${esc(c.zh)}</span></span>
       ${starBtn(id)}
     </a>`;
@@ -274,6 +279,8 @@ function viewUnit(uid) {
       <a class="pill" href="#/learn/${uid}/${Math.min(rec.pos || 0, u.cards.length - 1)}" data-autoplay>${rec.pos ? '繼續學習' : '開始學習'}</a>
       <button class="pill ghost" data-unit-quiz="${uid}">測驗這一站</button>
     </div></div>`;
+  // 目前這一個在畫面下面時捲過去（go() 會先捲回頂端，所以等下一格畫面）
+  if (cur > 2) requestAnimationFrame(() => { const el = $app.querySelector('.word-row.cur'); if (el) el.scrollIntoView({ block: 'center' }); });
 }
 
 /* ---------- 字卡（學習與查詢共用） ---------- */
@@ -473,16 +480,60 @@ function dictHTML(q) {
   if (!hits.length) return '<div class="dict-head"><span>字典</span><span>沒有找到</span></div>';
   const rows = hits.map(({ e }) => {
     const reading = e.r ? e.r[0] : '';
-    const kana = e.u || !e.k;
-    const main = kana ? esc(reading) : `<ruby>${esc(e.k[0])}<rt>${esc(reading)}</rt></ruby>`;
-    const alt = kana && e.k ? `<span class="d-alt">${esc(e.k[0])}</span>` : '';
     return `<div class="drow">
-      <div class="d-main"><span class="d-w" lang="ja">${main}</span>${alt}${e.p ? `<span class="d-p">${esc(e.p)}</span>` : ''}</div>
-      <div class="d-g" lang="en">${esc(e.g)}</div>
-      <button class="d-say" data-tts="${esc(reading)}" aria-label="用手機語音念 ${esc(reading)}">${I.speaker('ico-s')}</button>
+      <a class="d-link" href="#/dict/${e.i}">
+        <span class="d-main"><span class="d-w" lang="ja">${dictWordHTML(e)}</span>${e.u && e.k ? `<span class="d-alt">${esc(e.k[0])}</span>` : ''}${e.p ? `<span class="d-p">${esc(e.p)}</span>` : ''}</span>
+        ${e.z ? `<span class="d-g">${esc(e.z)}</span>` : `<span class="d-g" lang="en">${esc(e.g)}</span>`}
+      </a>
+      <button class="d-say" data-dsay="${e.i}" aria-label="播放 ${esc(reading)} 的發音">${I.speaker('ico-s')}</button>
     </div>`;
   }).join('');
-  return `<div class="dict-head"><span>字典（字卡以外的字）</span><span>${hits.length} 筆・英文釋義</span></div><div class="list dict">${rows}</div>`;
+  return `<div class="dict-head"><span>字典（字卡以外的字）</span><span>${hits.length} 筆</span></div><div class="list dict">${rows}</div>`;
+}
+
+// 字典詞的寫法：平常寫假名的（u）或沒有漢字的顯示假名，其餘漢字加標音
+function dictWordHTML(e) {
+  const reading = e.r ? e.r[0] : '';
+  return e.u || !e.k ? esc(reading) : `<ruby>${esc(e.k[0])}<rt>${esc(reading)}</rt></ruby>`;
+}
+
+// 字典的發音：預錄音檔（女聲），抓不到才用手機內建語音
+function playDict(i, btn) {
+  const e = dictEntry(i);
+  if (!e) return;
+  playFile(`audio/d/${e.i}.mp3`, btn, () => { speakJa(e.r ? e.r[0] : e.k[0]); toast('離線時用手機內建語音念（靜音模式可能沒有聲音）'); });
+}
+
+/* ---------- 字典的一個詞 ---------- */
+function viewDictEntry(i) {
+  if (!dictReady()) {
+    $app.innerHTML = '<div class="topbar"><button class="icon-btn" data-back aria-label="返回">' + I.back() + '</button><span class="title">字典</span></div><p class="none">字典載入中…</p>';
+    loadDict().then(() => { if (currentPath() === `dict/${i}`) viewDictEntry(i); }).catch(() => toast('字典載入失敗，連上網路後再試一次'));
+    return;
+  }
+  const e = dictEntry(i);
+  if (!e) return location.replace('#/browse');
+  const reading = e.r ? e.r[0] : '';
+  const shown = e.u || !e.k ? reading : e.k[0];
+  // 其他寫法與讀音
+  const alts = [...new Set([...(e.k || []), ...(e.r || [])])].filter((x) => x !== shown && x !== reading);
+  // 中文釋義（代理翻譯，分批補上）；還沒翻到的暫時顯示英文
+  const senses = (e.z ? e.z.split('；') : (e.g || '').split('; ')).map((x) => x.trim()).filter(Boolean);
+  // 例句裡用到這個字的字卡（最多 6 張）
+  const keys = [...(e.k || []), ...(e.r || [])].filter((x) => x.length >= 2);
+  const related = keys.length ? CARDS.filter((c) => c.ex && keys.some((k) => plain(c.ex).includes(k))).slice(0, 6) : [];
+  ctxList = { ids: related.map((c) => c.id), label: `例句裡有「${shown}」` };
+  $app.innerHTML = `
+    <div class="topbar"><button class="icon-btn" data-back aria-label="返回">${I.back()}</button><span class="title">字典</span></div>
+    <article class="card dict-card">
+      <div class="word" lang="ja" style="--hw:${wordSize(shown)}px">${dictWordHTML(e)}</div>
+      ${alts.length ? `<p class="d-alts" lang="ja">也寫作　${alts.map(esc).join('、')}</p>` : ''}
+      ${senses.length ? `<ol class="d-senses"${e.z ? '' : ' lang="en"'}>${senses.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : ''}
+      ${e.p ? `<span class="pos">${esc(e.p)}</span>` : ''}
+      <div class="say-row"><button class="say" data-dsay="${e.i}" aria-label="播放發音">${I.speaker()}<span>發音</span><span class="v">女聲</span></button></div>
+      ${related.length ? `<h2 class="group-title d-rel">例句裡有這個字的字卡</h2><div class="list">${related.map(rowHTML).join('')}</div>` : ''}
+      <p class="d-src">字典：JMdict（EDRDG，CC BY-SA 4.0）；中文釋義由 AI 翻譯，僅供參考</p>
+    </article>`;
 }
 
 // 字典的字沒有預錄音檔，用手機內建語音念
@@ -828,11 +879,12 @@ function applyTheme() {
 
 /* ---------- 事件 ---------- */
 document.addEventListener('click', async (e) => {
-  const el = e.target.closest('[data-tts],[data-tile],[data-slot],[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-jump],[data-fam],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
+  const el = e.target.closest('[data-tts],[data-dsay],[data-tile],[data-slot],[data-star],[data-say],[data-go],[data-back],[data-veil],[data-more],[data-jump],[data-fam],[data-f-tier],[data-f-th],[data-f-star],[data-unit-quiz],[data-star-quiz],[data-qs-scope],[data-qs-tier],[data-qs-th],[data-qc],[data-quiz-start],[data-choice],[data-quiz-next],[data-quiz-skip],[data-quiz-quit],[data-quiz-retry],[data-quiz-again],[data-star-all],[data-set],[data-dl],[data-export],[data-reset],a[data-autoplay]');
   if (!el) return;
   const d = el.dataset;
 
   if (d.tts !== undefined) { speakJa(d.tts); return; }
+  if (d.dsay !== undefined) { playDict(d.dsay, el); return; }
   if (d.tile !== undefined) { spellTap(+d.tile, null); return; }
   if (d.slot !== undefined) { spellTap(null, +d.slot); return; }
   if (d.star !== undefined) {

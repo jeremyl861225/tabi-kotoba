@@ -112,6 +112,79 @@ def word_ruby(head, read):
     return f"{{{head}|{kata2hira(read)}}}"
 
 
+def split_group_ruby(markup):
+    """一段標音跨了好幾個詞時照 Sudachi 的詞切開：{一度言|いちどい}って → {一度|いちど}{言|い}って。
+    （2026-09-25 使用者：「もう一度言ってください」的いちどい 整串標在「一度言」上，看起來標錯字）
+    切開後的讀音要和原本一字不差才換，對不上就維持原樣。"""
+    segs = segments(markup)
+    text = "".join(b for b, _ in segs)
+    if not any(rt and len(b) > 1 for b, rt in segs):
+        return markup
+    toks = [(m.begin(), m.end(), m.surface(), kata2hira(m.reading_form())) for m in sudachi_tokens(text)]
+    out, pos = [], 0
+    for base, rt in segs:
+        s, e = pos, pos + len(base)
+        pos = e
+        inner = [t for t in toks if t[0] < e and t[1] > s] if rt and len(base) > 1 else []
+        if len(inner) < 2:
+            out.append((base, rt))
+            continue
+        pieces = []
+        for ts, te, surf, rd in inner:
+            # 全是漢字的詞整個標一段（{一度|いちど}、{大丈夫|だいじょうぶ}）：逐字標會把字距撐開（大 丈 夫）
+            if all(re.match(f"[{KANJI_CLASS}]", ch) for ch in surf):
+                wm = f"{{{surf}|{rd}}}"
+            else:
+                wm = word_ruby(surf, rd) if has_kanji(surf) else surf
+            p = ts
+            for b2, r2 in segments(wm):
+                bs, be = p, p + len(b2)
+                p = be
+                if bs >= s and be <= e:
+                    pieces.append((b2, r2))
+                elif bs < e and be > s:   # 標音單位跨出這一段（詞的讀音對不齊），放棄
+                    pieces = None
+                    break
+            if pieces is None:
+                break
+        fur = furigana_index()
+        known = lambda b, r: len(b) == 1 or fur.get((b, r)) or fur.get((b, kata2hira(r)))   # 「日間／かかん」這種分析器的怪切法不要
+        if (pieces and "".join(b for b, _ in pieces) == base and all(r for _, r in pieces)
+                and all(known(b, r) for b, r in pieces)
+                and "".join(kata2hira(r) for _, r in pieces) == kata2hira(rt)):
+            out.extend(pieces)
+        else:
+            out.append((base, rt))
+    return "".join(f"{{{b}|{r}}}" if r else b for b, r in out)
+
+
+def insert_tildes(markup, head):
+    """標音是用去掉〜的寫法算的；把〜放回 head 裡原本的位置（〜は{食|た}べられません、{私|わたし}の{名前|なまえ}は〜です）"""
+    tpos = [i for i, ch in enumerate(head) if ch in "〜～"]
+    if not tpos:
+        return markup
+    out, k, n = [], 0, 0   # k：已輸出的 head 字數（含〜）、n：下一個〜在 tpos 的位置
+    def flush():
+        nonlocal k, n
+        while n < len(tpos) and tpos[n] == k:
+            out.append("〜")
+            k += 1
+            n += 1
+    for b, rt in segments(markup):
+        if rt:
+            flush()
+            out.append(f"{{{b}|{rt}}}")
+            k += len(b)
+        else:
+            for ch in b:
+                flush()
+                out.append(ch)
+                k += 1
+    flush()
+    out.extend("〜" for _ in tpos[n:])
+    return "".join(out)
+
+
 def uncovered_kanji(markup):
     """ruby 以外還有沒有漏標的漢字"""
     bare = RUBY_RE.sub("", markup)

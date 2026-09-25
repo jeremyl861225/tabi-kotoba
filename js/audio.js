@@ -50,6 +50,25 @@ export function play(id, part = 'w', btn = null, voice = null) {
   return v;
 }
 
+// 字典的字：audio/d/<JMdict 編號>.mp3，點了才抓；抓不到（離線、沒有這個檔）時呼叫 onFail（退回手機語音）
+export function playFile(src, btn = null, onFail = null) {
+  clearPlaying();
+  player.pause();
+  player.src = src;
+  player.defaultPlaybackRate = store.settings.rate;
+  player.playbackRate = store.settings.rate;
+  if ('preservesPitch' in player) player.preservesPitch = true;
+  if (btn) { playingBtn = btn; btn.classList.add('playing'); }
+  const p = player.play();
+  if (p && p.catch) {
+    p.catch((err) => {
+      clearPlaying();
+      if (err && err.name === 'NotAllowedError') return;
+      if (onFail) onFail();
+    });
+  }
+}
+
 export function stop() { player.pause(); }
 
 // 離線下載：把音檔放進獨立快取（改版不會清掉）

@@ -8,7 +8,7 @@ import json, os, re, sys, glob, datetime, collections
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "pipeline"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import *
-from rubytools import word_ruby, plain, reading, segments, uncovered_kanji, check_sentence, tts_text, romaji_for, RUBY_RE
+from rubytools import KANJI_CLASS, word_ruby, plain, reading, segments, uncovered_kanji, check_sentence, tts_text, romaji_for, RUBY_RE, split_group_ruby, insert_tildes
 from themes import theme_list, family_list
 import opencc
 
@@ -26,20 +26,28 @@ def odd_chars(s):
 
 
 def phrase_ruby(head, read):
-    """句子的標音：先用假名錨點對齊；對不上就逐詞用 Sudachi 讀音"""
+    """句子的標音：先用假名錨點對齊；對不上就逐詞用 Sudachi 讀音。
+    比對讀音時不管標點（寫法「はい、お願いします」、讀音「はいおねがいします」），阿拉伯數字也標上讀音（5番ゲート）；
+    否則會退回整句一個標音（2026-09-25 使用者截圖：「はいおねがいします」整串疊在「はい、お願いします」上）"""
+    same = lambda a, b: re.sub(r"[、。，．・？！?!\s　]", "", kata2hira(a)) == re.sub(r"[、。，．・？！?!\s　]", "", kata2hira(b))
     mk = word_ruby(head, read)
-    if kata2hira(reading(mk)) == kata2hira(read) and not (mk.startswith("{") and mk.endswith("}") and len(plain(mk)) > 4):
+    if same(reading(mk), read) and not (mk.startswith("{") and mk.endswith("}") and len(plain(mk)) > 4):
         return mk
     out = []
     for t in sudachi_tokens(head):
         s = t.surface()
         if has_kanji(s):
             r = kata2hira(t.reading_form())
-            out.append(word_ruby(s, r) if s != r else s)
+            if all(re.match(f"[{KANJI_CLASS}]", ch) for ch in s):   # 全漢字的詞整段標（大丈夫），不逐字撐開字距
+                out.append(f"{{{s}|{r}}}")
+            else:
+                out.append(word_ruby(s, r) if s != r else s)
+        elif re.fullmatch(r"[0-9０-９]+", s) and t.reading_form():
+            out.append(f"{{{s}|{kata2hira(t.reading_form())}}}")
         else:
             out.append(s)
     mk2 = "".join(out)
-    return mk2 if kata2hira(reading(mk2)) == kata2hira(read) else mk
+    return mk2 if same(reading(mk2), read) else mk
 
 
 def clean_markup(mk):
@@ -62,7 +70,18 @@ def same_as_chinese(head, zh):
     return t in first or (len(t) >= 2 and sum(c in first for c in t) >= len(t) - 0)
 
 
+def particle_start(t, head):
+    """句型開頭的〜拿掉後第一個字是助詞「は／へ」，語音會念成 ha／he（2026-09-25 使用者：「〜はありますか」的は念成 ha）"""
+    if re.match(r"^[〜～]", head) and t[:1] in "はへ":
+        return {"は": "わ", "へ": "え"}[t[0]] + t[1:]
+    return t
+
+
 def word_tts(head, read, kind, markup):
+    return particle_start(_word_tts(head, read, kind, markup), head)
+
+
+def _word_tts(head, read, kind, markup):
     if kind == "p":   # 句子卡也可能是句型（いくら〜ても）：〜 同樣開頭不念、中間停頓
         return tts_text(re.sub(r"^[〜～]+|[〜～]+$", "", markup).replace("〜", "、").replace("～", "、"))
     # 括號：漢字註記不念（〜そうだ（伝聞））、假名照念（〜（ら）れる → られる）
@@ -75,6 +94,50 @@ def word_tts(head, read, kind, markup):
     toks = list(sudachi_tokens(head))
     sud = "".join(kata2hira(t.reading_form()) for t in toks)
     return head if sud == kata2hira(read) else read
+
+
+# 數字＋量詞的音變（2026-09-25：「二十分」被標成にじゅうふん、「10分」標成ふん，自動檢查都沒抓到）
+# 鍵是數字的最後一位（十、百、千、0 都算 0），值是可以接受的讀音
+_CNT = {
+    "分": "ぷん ふん ぷん ぷん ふん ぷん ふん ぷん|ふん ふん ぷん",
+    "本": "ぽん ほん ぼん ほん ほん ぽん ほん ぽん|ほん ほん ぽん",
+    "杯": "ぱい はい ばい はい はい ぱい はい ぱい|はい はい ぱい",
+    "匹": "ぴき ひき びき ひき ひき ぴき ひき ぴき|ひき ひき ぴき",
+    "泊": "ぱく はく ぱく|はく はく|ぱく はく ぱく はく ぱく|はく はく ぱく",
+    "階": "かい かい がい|かい かい かい かい かい かい|はっかい かい かい",
+}
+COUNTER_OK = {c: dict(zip("1234567890", (set(x.split("|")) for x in v.split()))) for c, v in _CNT.items()}
+_NUMK = {"一": "1", "二": "2", "三": "3", "四": "4", "五": "5", "六": "6", "七": "7", "八": "8", "九": "9", "十": "0", "百": "0", "千": "0"}   # 〇 是卡片裡填數字的空格（バス〇分），不算
+_NUMK.update({ch: str(i) for i, ch in enumerate("０１２３４５６７８９")})
+_HOW = {"分": {"ぷん"}, "本": {"ぼん"}, "杯": {"ばい"}, "匹": {"びき"}, "泊": {"ぱく"}, "階": {"がい", "かい"}}
+
+
+def counter_problems(markup):
+    """「5{分|ふん}」「{二十|にじゅう}{分|ふん}」「{五分|ごふん}」這三種寫法的量詞讀音"""
+    segs = segments(markup)
+    bad = []
+    for j, (b, rt) in enumerate(segs):
+        if not rt:
+            continue
+        cnt, num, rd = None, None, None
+        if b in COUNTER_OK and j > 0:              # {分|ふん}，前面是數字
+            prev = segs[j - 1][0]
+            cnt, rd, num = b, kata2hira(rt), prev[-1:] if prev else ""
+        elif len(b) >= 2 and b[-1] in COUNTER_OK:    # {五分|ごふん}
+            cnt, num = b[-1], b[-2]
+            rd = kata2hira(rt)
+        if not cnt or not num:
+            continue
+        if num == "何":
+            ok = any(rd.endswith(x) for x in _HOW[cnt])
+        else:
+            d = num if num.isdigit() and num.isascii() else _NUMK.get(num)
+            if d is None:
+                continue
+            ok = any(rd.endswith(x) for x in COUNTER_OK[cnt][d])
+        if not ok:
+            bad.append(f"{segs[j - 1][0] if b in COUNTER_OK else ''}{b}={rd}")
+    return bad
 
 
 def pattern_in_example(head, p):
@@ -171,13 +234,16 @@ def main():
             head = a["head"]
         if a.get("reading"):
             read = a["reading"]
-        # 全形～統一成〜；讀音不含〜（日檢表的「～人／～じん」，撰寫代理有時照抄）
-        head, read = head.replace("～", "〜"), read.replace("〜", "").replace("～", "")
-        w = phrase_ruby(head, read) if kind == "p" else word_ruby(head, read)
-        strip_w = lambda x: re.sub(r"[〜～（）()]", "", kata2hira(x))
+        # 標音：寫法與讀音都去掉〜來對齊，再把〜放回寫法原位（旅遊卡的讀音有〜、日檢卡的沒有，兩種都對得上）；
+        # 讀音欄 r 由標音反推，〜 跟寫法一致（「〜にいきますか」「わたしのなまえは〜です」）
+        head = head.replace("～", "〜")
+        h0, r0 = head.replace("〜", ""), read.replace("〜", "").replace("～", "")
+        w = insert_tildes(split_group_ruby(phrase_ruby(h0, r0) if kind == "p" else word_ruby(h0, r0)), head)
+        read = reading(w) if "〜" in head else r0
+        strip_w = lambda x: re.sub(r"[〜～（）()、。，．・？！?!\s　]", "", kata2hira(x))
         if strip_w(reading(w)) != strip_w(read):
             qa["head_ruby_mismatch"].append([c["id"], head, read, w])
-        ex = clean_markup(a.get("ex", "").strip())
+        ex = split_group_ruby(clean_markup(a.get("ex", "").strip()))
         zh = a.get("zh", "").strip()
         card = {
             "id": c["id"], "w": w, "r": read, "zh": zh, "pos": a.get("pos", ""),
@@ -212,6 +278,9 @@ def main():
             qa["reading_mismatch"].append([c["id"], ex, [list(b) for b in bad]])
         if kind != "p" and c["id"] not in example_ok and not head_in_example(head, ex, read):
             qa["head_not_in_example"].append([c["id"], head, plain(ex)])
+        cp = counter_problems(ex) + counter_problems(w)
+        if cp:
+            qa["counter_reading"].append([c["id"], ex, cp])
         if len(plain(ex)) > 40:
             qa["long_example"].append([c["id"], plain(ex)])
 
