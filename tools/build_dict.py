@@ -31,7 +31,8 @@ def load_zh():
             p = ln.rstrip("\n").split("\t")
             # 佔位文字（代理偷懶寫的「翻譯待補」）不算
             if len(p) >= 2 and p[1].strip() and not re.search(r"待補|待翻|^翻譯$|TODO", p[1]):
-                zh[p[0].strip()] = p[1].strip()
+                senses = list(dict.fromkeys(x.strip() for x in p[1].split("；") if x.strip()))   # 去掉空義項與重複（理想的；理想的）
+                zh[p[0].strip()] = "；".join(senses)
     return zh
 
 
