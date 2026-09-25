@@ -56,9 +56,11 @@
 
 - [x] `tools/pipeline/expand_prep.py`：日檢 3,423 條 → 扣掉字卡已有 412 → 新候選 3,011（N5 463、N4 585、N3 1,963）
 - [x] 新主題：VB 常用動詞、AJ 形容詞、AV 副詞、CJ 連接詞與句型（基本家族）、LF 生活用語（觀光生活家族）、KG 敬語（店員廣播家族）
-- [~] 選字：`build/expand/curate/in-01…21.json` → `out-NN.tsv`（Sonnet 代理，規則 `curate/RULES.md`）；補充清單另外去重
-- [ ] select.py 擴充模式（新字依級數分線、站內旅遊字在前、純新字的站平均穿插在旅遊站之間）
-- [ ] 撰寫新卡（PROMPT 加 CJ／KG 規則）→ 課名全部重取 → build_data（`jl` 日檢級數、沒有旅遊排名的卡顯示「日檢 Nx」）→ 語音 → e2e → 上線
+- [x] 選字：`build/expand/curate/in-01…21.json` → `out-NN.tsv`（Sonnet 代理）：收 2,964、刪 47（政治、學術、股市用語）
+- [x] 補充清單 410 條（連接詞 160、敬語 100、招牌菜單 150）→ `tools/pipeline/build_extras.py` → `build/expand/extras.json`
+- [x] select.py 擴充模式：新卡 3,288 張（N5→必備 478、N4→常用 681、N3→進階 2,129），總數 4,488、285 站；擴充站 id 為 `1-VB-x1` 這種，和旅遊站分開；每條線第一站固定旅遊站、新字站以動詞形容詞連接詞優先輪流、平均穿插；之前刪掉的字不收回。備份：`build/selection.before-n3.json`、`ids.before-n3.json`
+- [~] 撰寫：`build/author/in-14…46.json`（每批 100）。14–17（連接詞、敬語、招牌菜單）用 Opus；18–46 用 Sonnet；規格 `PROMPT.md` 末段「擴充卡」
+- [ ] 新站取課名（旅遊站沿用 `unit_names.json`）→ build_data（`jl` 日檢級數、沒有旅遊排名的卡顯示「日檢 Nx」）→ 語音 → e2e → 上線
 
 ## 工具
 
