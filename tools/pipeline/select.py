@@ -87,6 +87,8 @@ def clean_jlpt(head, read):
     note = ""
     if re.search(r"\s*[（(]する[)）]", read):
         note = f"加「する」當動詞：{head}する"
+    elif read.endswith("する") and not head.endswith(("する", "る")) and len(read) > 2:   # 世話／せわする（擦る／する 是正常的）
+        note, read = f"加「する」當動詞：{head}する", read[:-2]
     head = re.sub(r"\s*[（(](?:する|かん)[)）]", "", head)
     read = re.sub(r"\s*[（(](?:する|かん)[)）]", "", read)
     m = re.match(r"^([^～〜]+?)\s*[（(]([^()（）]+)[)）]$", head)   # パート (タイム) → パート，全名寫進說明
