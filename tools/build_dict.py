@@ -30,7 +30,8 @@ def load_zh():
         for ln in open(f, encoding="utf-8"):
             p = ln.rstrip("\n").split("\t")
             # 佔位文字（代理偷懶寫的「翻譯待補」）不算
-            if len(p) >= 2 and p[1].strip() and not re.search(r"待補|待翻|^翻譯$|TODO", p[1]):
+            # 只收「編號<TAB>中文」兩欄；「-」、英文單字、佔位文字（代理偷懶寫的「翻譯待補」）都不算
+            if len(p) == 2 and p[1].strip() not in ("", "-") and not re.search(r"待補|待翻|^翻譯$|TODO|[A-Za-z]*[a-z]{3,}", p[1]):
                 senses = list(dict.fromkeys(x.strip() for x in p[1].split("；") if x.strip()))   # 去掉空義項與重複（理想的；理想的）
                 zh[p[0].strip()] = "；".join(senses)
     return zh
