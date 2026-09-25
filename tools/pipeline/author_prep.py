@@ -32,6 +32,10 @@ def main():
                 d["src_meaning"] = m
             if c.get("gloss"):
                 d["jm_gloss"] = c["gloss"][:4]
+            if c.get("jl"):
+                d["jl"] = c["jl"]
+            if c.get("src_note"):
+                d["src_note"] = c["src_note"]
             part.append(d)
         n = start + i // BATCH
         json.dump(part, open(os.path.join(outdir, f"in-{n:02d}.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=0)

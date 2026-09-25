@@ -18,6 +18,22 @@ from themes import ASSIGN
 FAMILY = {t: fam for t, (fam, _) in ASSIGN.items()}  # 太小的主題組併到同家族裡最大的一組（從 themes.py 推，新增主題不會 KeyError）
 
 
+def split_units(g, tier, th, tag):
+    """一組卡平均切成 ≤UNIT_MAX 張的站；tag 是 "x" 時為擴充站（id 1-VB-x1，和旅遊站 1-VB-1 分開，舊進度不亂）"""
+    out = []
+    k = math.ceil(len(g) / UNIT_MAX)
+    size = math.ceil(len(g) / k)
+    for p in range(k):
+        part = g[p * size:(p + 1) * size]
+        if not part:
+            continue
+        own = [x["no"] for x in part if x["theme"] == th]
+        out.append({"id": f"{tier}-{th}-{tag}{p + 1}", "t": tier, "th": th, "part": p + 1, "parts": k,
+                    "cards": [x["id"] for x in part],
+                    "from": min(own) if own else part[0]["no"], "to": max(own) if own else part[-1]["no"]})
+    return out
+
+
 def load_decisions():
     dec = {}
     for f in sorted(glob.glob(os.path.join(BUILD, "curate", "out-*.json"))):
@@ -28,6 +44,33 @@ def load_decisions():
         for d in json.load(open(man, encoding="utf-8")):
             dec[d["key"]] = {**dec.get(d["key"], {}), **d}
     return dec
+
+
+EXP = os.path.join(BUILD, "expand")
+LEVEL_TIER = {5: 1, 4: 2, 3: 3}   # 日檢 N5→必備線、N4→常用線、N3→進階線（2026-09-25 使用者：基礎字混進現有三條線）
+
+
+def load_expansion():
+    """擴充到日檢 N3 的新字：curate/in-NN.json＋out-NN.tsv（K 才收），以及 extras.json（連接詞、敬語等直接指定主題的清單）"""
+    items = []
+    for inp in sorted(glob.glob(os.path.join(EXP, "curate", "in-*.json"))):
+        outp = inp.replace("in-", "out-").replace(".json", ".tsv")
+        if not os.path.exists(outp):
+            continue
+        rows = json.load(open(inp, encoding="utf-8"))
+        dec = [ln.rstrip("\n").split("\t") for ln in open(outp, encoding="utf-8") if ln.strip()]
+        for r, d in zip(rows, dec):
+            if len(d) < 4 or d[0] != r["key"] or d[1] != "K" or d[2] not in THEME_IDS:
+                continue
+            items.append({"key": r["key"], "head": r["head"].strip(), "reading": r["reading"].strip(), "jl": int(r["jlpt"]),
+                          "theme": d[2], "kind": "p" if d[3] == "p" else "w", "meanings": {k: v for k, v in (("en", [r.get("meaning", "")]), ("zh", r.get("zh", []))) if v and v != [""]},
+                          "src_note": r.get("note", ""), "fix": d[4] if len(d) > 4 else ""})
+    ex = os.path.join(EXP, "extras.json")
+    if os.path.exists(ex):
+        for r in json.load(open(ex, encoding="utf-8")):
+            items.append({"key": r["key"], "head": r["head"], "reading": r["reading"], "jl": int(r["level"]), "theme": r["theme"],
+                          "kind": r.get("kind", "w"), "meanings": {"zh": [r["zh"]]} if r.get("zh") else {}, "src_note": r.get("note", ""), "fix": ""})
+    return items
 
 
 def main():
@@ -115,11 +158,37 @@ def main():
         it["rank"] = i + 1
         it["tier"] = 1 if i < n1 else 2 if i < n2 else 3
 
+    # ---- 擴充：日檢 N5–N3 的新字，依級數分到三條線（沒有旅遊排名，rank 為 None）----
+    have_keys = {k for it in sel for k in it["keys"]}
+    have_forms = {(it["head"], kata2hira(it["reading"])) for it in sel}
+    exp = []
+    for it in load_expansion():
+        fk = (it["head"], kata2hira(it["reading"]))
+        if it["key"] in have_keys or fk in have_forms:
+            continue
+        have_keys.add(it["key"]); have_forms.add(fk)
+        it.update({"sources": [], "n": 0, "zipf": zipf_frequency(it["head"].strip("〜～"), "ja"), "rank": None,
+                   "tier": LEVEL_TIER.get(it["jl"], 3), "gloss": [], "keys": [it["key"]], "exp": True})
+        exp.append(it)
+    # 旅遊字也標上日檢級數（有在日檢表裡的）
+    jl_map = {}
+    jp = os.path.join(EXP, "jlpt_candidates.json")
+    if os.path.exists(jp):
+        for c in json.load(open(jp, encoding="utf-8")):
+            jl_map[c["key"]] = max(jl_map.get(c["key"], 0), c["jlpt"])
+    for it in sel:
+        lv = [jl_map[k] for k in it["keys"] if k in jl_map]
+        if lv:
+            it["jl"] = max(lv)
+    if exp:
+        print(f"擴充新字 {len(exp)}：", dict(collections.Counter(("必備", "常用", "進階")[it["tier"] - 1] for it in exp)),
+              collections.Counter(it["theme"] for it in exp).most_common(10))
+
     # 編號登記（跨版本穩定）
     ids_path = os.path.join(BUILD, "ids.json")
     ids = json.load(open(ids_path)) if os.path.exists(ids_path) else {}
     nxt = max([int(v) for v in ids.values()] + [0]) + 1
-    for it in sel:
+    for it in sel + exp:
         fk = f"{it['head']}|{kata2hira(it['reading'])}"
         if fk not in ids:
             ids[fk] = f"{nxt:04d}"
@@ -127,9 +196,10 @@ def main():
         it["id"] = ids[fk]
     json.dump(ids, open(ids_path, "w", encoding="utf-8"), ensure_ascii=False, indent=0)
 
-    # 站號：同主題依排名 01, 02…
+    # 站號：同主題依排名 01, 02…（擴充字接在旅遊字後面，依級數、詞頻）
+    exp.sort(key=lambda it: (it["tier"], -it["zipf"], it["reading"]))
     cnt = collections.Counter()
-    for it in sel:
+    for it in sel + exp:
         cnt[it["theme"]] += 1
         it["no"] = cnt[it["theme"]]
 
@@ -149,22 +219,35 @@ def main():
                 groups[host].sort(key=lambda it: it["rank"])
         # 課的順序：整組的平均排名（比單看第一名穩定，必備線才不會從招牌開始）
         order = sorted(groups.items(), key=lambda kv: sum(x["rank"] for x in kv[1]) / len(kv[1]))
+        T, E = [], []
         for th, g in order:
-            k = math.ceil(len(g) / UNIT_MAX)
-            size = math.ceil(len(g) / k)
-            for p in range(k):
-                part = g[p * size:(p + 1) * size]
-                if not part:
-                    continue
-                own = [x["no"] for x in part if x["theme"] == th]
-                units.append({"id": f"{tier}-{th}-{p + 1}", "t": tier, "th": th, "part": p + 1, "parts": k,
-                              "cards": [x["id"] for x in part],
-                              "from": min(own) if own else part[0]["no"], "to": max(own) if own else part[-1]["no"]})
-    out = [{k: (sorted(v) if isinstance(v, set) else v) for k, v in it.items()} for it in sel]
+            T += split_units(g, tier, th, "")
+        # 擴充字：同級同主題一組，切成 ≤20 張的站；各主題輪流排，再平均穿插到旅遊站之間
+        eg = collections.OrderedDict()
+        for it in exp:
+            if it["tier"] == tier:
+                eg.setdefault(it["theme"], []).append(it)
+        small = [th for th, g in eg.items() if len(g) < UNIT_MIN]
+        for th in small:
+            fam = [t for t in eg if t != th and FAMILY[t] == FAMILY[th] and len(eg[t]) >= UNIT_MIN]
+            if fam:
+                host = max(fam, key=lambda t: len(eg[t]))
+                eg[host].extend(eg.pop(th))
+        lanes = [split_units(g, tier, th, "x") for th, g in sorted(eg.items(), key=lambda kv: -len(kv[1]))]
+        while any(lanes):
+            for lane in lanes:
+                if lane:
+                    E.append(lane.pop(0))
+        if E and T:
+            merged = sorted([((i + 0.5) / len(T), 0, i) for i in range(len(T))] + [((j + 0.5) / len(E), 1, j) for j in range(len(E))])
+            units += [T[i] if kind == 0 else E[i] for _, kind, i in merged]
+        else:
+            units += T + E
+    out = [{k: (sorted(v) if isinstance(v, set) else v) for k, v in it.items()} for it in sel + exp]
     json.dump({"cards": out, "units": units}, open(os.path.join(BUILD, "selection.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-    tiers = collections.Counter(it["tier"] for it in sel)
-    print("分級:", dict(tiers), " 單元數:", len(units))
-    print("主題分佈:", collections.Counter(it["theme"] for it in sel).most_common())
+    tiers = collections.Counter(it["tier"] for it in sel + exp)
+    print("分級:", dict(tiers), " 單元數:", len(units), " 卡片:", len(sel) + len(exp))
+    print("主題分佈:", collections.Counter(it["theme"] for it in sel + exp).most_common())
     print("各級單元大小:", [(u["id"], len(u["cards"])) for u in units][:80])
 
 

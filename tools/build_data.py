@@ -65,6 +65,8 @@ def same_as_chinese(head, zh):
 def word_tts(head, read, kind, markup):
     if kind == "p":
         return tts_text(markup)
+    head = head.replace("〜", "").replace("～", "")   # 句型的「〜」不念
+    read = read.replace("〜", "").replace("～", "")
     if not has_kanji(head):
         return head
     toks = list(sudachi_tokens(head))
@@ -127,13 +129,14 @@ def main():
         if a.get("reading"):
             read = a["reading"]
         w = phrase_ruby(head, read) if kind == "p" else word_ruby(head, read)
-        if kata2hira(reading(w)) != kata2hira(read):
+        strip_w = lambda x: kata2hira(x).replace("〜", "").replace("～", "")
+        if strip_w(reading(w)) != strip_w(read):
             qa["head_ruby_mismatch"].append([c["id"], head, read, w])
         ex = clean_markup(a.get("ex", "").strip())
         zh = a.get("zh", "").strip()
         card = {
             "id": c["id"], "w": w, "r": read, "zh": zh, "pos": a.get("pos", ""),
-            "th": c["theme"], "t": c["tier"], "rank": c["rank"], "n": c["n"], "no": c["no"],
+            "th": c["theme"], "t": c["tier"], "rank": c["rank"], "n": c["n"], "no": c["no"], "jl": c.get("jl"),
             "ex": ex, "exz": a.get("exz", "").strip(), "note": a.get("note", "").strip(), "k": kind,
         }
         verb_u = card["pos"].startswith("動詞")
@@ -142,6 +145,8 @@ def main():
             card["sm"] = 1
         if not card["note"]:
             del card["note"]
+        if not card["jl"]:
+            del card["jl"]
         cards.append(card)
         tts[c["id"]] = {"w": word_tts(head, read, kind, w), "x": tts_text(ex) if ex else ""}
 

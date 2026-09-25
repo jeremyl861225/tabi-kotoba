@@ -16,6 +16,7 @@
 
 - 讀音與標音校對：[JMdict](https://www.edrdg.org/jmdict/j_jmdict.html)（EDRDG，CC BY-SA 4.0）、[JmdictFurigana](https://github.com/Doublevil/JmdictFurigana)、SudachiPy。
 - 離線字典：JMdict 常用詞（約 2.2 萬詞，CC BY-SA 4.0），`data/dict.json` 沿用同授權。
+- 日檢 N5–N3 擴充單字與級數：[open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks)（MIT，資料源自 [tanos.co.uk](http://www.tanos.co.uk/jlpt/) 的日檢單字表）。
 - 字型：使用裝置內建的明朝體與宋體，不隨 App 發佈字型檔。
 - 發音：Microsoft 神經語音 Nanami、Keita，以 [edge-tts](https://github.com/rany2/edge-tts) 產生，僅供個人學習。
 - 例句與中文解釋由 AI 撰寫，經字典與形態素分析器比對讀音；如有錯誤歡迎回報。

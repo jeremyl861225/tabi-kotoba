@@ -66,6 +66,8 @@ function unitBadge(u, sm = false) {
 const stationName = (u) => `${TIER[u.t].name}線第 ${u.sn} 站`;
 // 單字編號（照學習順序）：0001、0002…
 const no4 = (c) => String(c.sq || 0).padStart(4, '0');
+// 排序：有旅遊排名的依排名；日檢擴充字（沒有旅遊排名）排在後面、照學習順序
+const byRank = (a, b) => (a.rank || 1e6 + (a.sq || 0)) - (b.rank || 1e6 + (b.sq || 0));
 
 function starBtn(id) {
   const on = isStarred(id);
@@ -292,7 +294,7 @@ function cardHTML(card, opts = {}) {
     <span class="pos">${esc(card.pos || '')}</span>
     <div class="say-row">${sayBtn(card.id, 'w', card.k === 'p' ? '整句' : '單字')}</div>
     ${ex}
-    <div class="facts"><span class="sq">編號 ${no4(card)}</span>${stars(card.t)}<span>${TIER[card.t].name}</span><span>旅遊頻率第 ${card.rank} 名</span>${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
+    <div class="facts"><span class="sq">編號 ${no4(card)}</span>${stars(card.t)}<span>${TIER[card.t].name}</span>${card.rank ? `<span>旅遊頻率第 ${card.rank} 名</span>` : ''}${card.jl ? `<span>日檢 N${card.jl}</span>` : ''}${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
   </article>`;
 }
 
@@ -403,7 +405,7 @@ function filterCards() {
       list = list.filter((c) => c._plain.includes(q) || c._plainN.includes(nq) || c._hira.includes(nq) || c.zh.includes(q));
     }
     const starts = (c) => (c._plain.startsWith(q) || c._hira.startsWith(nq) || (isAscii(q) && c._rk.startsWith(romaKey(q))) ? 0 : 1);
-    list = list.slice().sort((a, b) => starts(a) - starts(b) || a.rank - b.rank);
+    list = list.slice().sort((a, b) => starts(a) - starts(b) || byRank(a, b));
   } else if (browse.sort === 'kana') {
     list = list.slice().sort((a, b) => a._hira.localeCompare(b._hira, 'ja'));
   }
@@ -513,7 +515,7 @@ function renderResults() {
 
 /* ---------- 不熟單字 ---------- */
 function viewStarred() {
-  const list = CARDS.filter((c) => isStarred(c.id)).sort((a, b) => a.rank - b.rank);
+  const list = CARDS.filter((c) => isStarred(c.id)).sort(byRank);
   ctxList = { ids: list.map((c) => c.id), label: '不熟單字' };
   $app.innerHTML = `
     <h1 class="page-title">不熟單字</h1>
@@ -797,7 +799,7 @@ async function viewSettings() {
     <h2 class="group-title">關於</h2>
     <div class="group">
       <p class="fine">共 ${CARDS.length} 張字卡，分 ${UNITS.length} 課。「旅遊頻率」是把 ${DATA.meta.sources.length} 份中、日、英文旅遊日語教材的詞表合併，看每個詞被幾份收錄來排名；收錄數相同時，再依一般日語語料庫（wordfreq）的使用頻率排序。</p>
-      <p class="fine">發音：Microsoft 神經語音 Nanami（女聲）與 Keita（男聲），以 edge-tts 產生，僅供個人學習。讀音校對：JMdict／EDRDG（CC BY-SA 4.0）、JmdictFurigana。字卡以外的字：離線字典取自 JMdict 常用詞（CC BY-SA 4.0，英文釋義），發音用手機內建語音。例句與中文解釋由 AI 撰寫並經讀音比對檢查。</p>
+      <p class="fine">發音：Microsoft 神經語音 Nanami（女聲）與 Keita（男聲），以 edge-tts 產生，僅供個人學習。讀音校對：JMdict／EDRDG（CC BY-SA 4.0）、JmdictFurigana。字卡以外的字：離線字典取自 JMdict 常用詞（CC BY-SA 4.0，英文釋義），發音用手機內建語音。日檢 N5–N3 的擴充單字與級數：open-anki-jlpt-decks（MIT，資料源自 tanos.co.uk 的日檢單字表）。例句與中文解釋由 AI 撰寫並經讀音比對檢查。</p>
       <details><summary>詞頻來源（${DATA.meta.sources.length} 份）</summary><ol class="src-list">${DATA.meta.sources.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ol></details>
       <p class="fine">資料版本 ${esc(DATA.meta.version)}</p>
     </div>`;
