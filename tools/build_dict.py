@@ -22,6 +22,10 @@ def pos_label(codes):
     return ""
 
 
+# opencc s2tw 會把正確的台灣用字改錯，代理照著改就會出錯（2026-09-26 實際出現：干擾→幹擾、傢伙→傢夥、游擊手→遊擊手）
+OPENCC_FIX = {"幹擾": "干擾", "幹涉": "干涉", "幹預": "干預", "若幹": "若干", "傢夥": "傢伙", "遊擊手": "游擊手", "遊擊隊": "游擊隊"}
+
+
 def load_zh():
     """代理翻好的中文釋義：build/dictzh/out-NN.tsv（jmid<TAB>中文），見 pipeline/dict_zh_prep.py"""
     zh = {}
@@ -32,7 +36,10 @@ def load_zh():
             # 佔位文字（代理偷懶寫的「翻譯待補」）不算
             # 只收「編號<TAB>中文」兩欄；「-」、英文單字、佔位文字（代理偷懶寫的「翻譯待補」）都不算
             if len(p) == 2 and p[1].strip() not in ("", "-") and not re.search(r"待補|待翻|^翻譯$|TODO|[A-Za-z]*[a-z]{3,}", p[1]):
-                senses = list(dict.fromkeys(x.strip() for x in p[1].split("；") if x.strip()))   # 去掉空義項與重複（理想的；理想的）
+                z = p[1]
+                for a, b in OPENCC_FIX.items():   # 代理照 opencc 改錯的字改回來
+                    z = z.replace(a, b)
+                senses = list(dict.fromkeys(x.strip() for x in z.split("；") if x.strip()))   # 去掉空義項與重複（理想的；理想的）
                 zh[p[0].strip()] = "；".join(senses)
     return zh
 
