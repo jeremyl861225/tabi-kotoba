@@ -66,10 +66,25 @@
   **14–25 已完成並驗收**（1,200 張；抽讀＋QA 修 5 張標音、`fix.json` 共 16 條、`reading_ok.json` 逐張確認）；26–29 撰寫中；30–46 未派。
   2026-09-25 19:31 撞 session 用量上限（22:20 重置）兩個代理一起停，26 批一條都沒寫、分站做完 24 條線
 - [x] 已寫好的卡先產音檔（manifest 雜湊，文字改了會自動重做）：9,034 個、0 失敗
-- [~] **語意分站＋課名**（前 24 條線完成並驗證，從 2-MD 接手中）：`tools/pipeline/group_prep.py` → `build/expand/group/in-<級>-<主題>.json`（48 條擴充線）＋`RULES.md`；
+- [x] **語意分站＋課名**（48 條線 226 站全部完成；主線程改掉 14 個勉強的站名、旅遊站只採納 7 個改名，其餘沿用；全 App 314 站無重名）：`tools/pipeline/group_prep.py` → `build/expand/group/in-<級>-<主題>.json`（48 條擴充線）＋`RULES.md`；
   代理寫 `out-<級>-<主題>.json`（[{name, ids}]）與 `rename-out.json`（併進新字的旅遊站改名）；select 重跑就照分組切站、組名當課名
   （原本照詞頻每 20 張切一站，站內的字不相干，也取不出課名）。改名要併進 `unit_names.json`
 - [ ] build_data（QA：`reading_ok.json` 可寫 `"*"` 當全域白名單；句型例句比對已改成逐段）→ 抽讀 30 張 → 語音 → e2e → CACHE_VERSION v14 → 上線
+
+## 2026-09-25 晚：使用者回報四個問題（已修正上線 v14，commit 94d4252）
+
+1. 句型卡「〜はありますか」女聲把は念成 ha → `build_data.particle_start`：〜拿掉後第一個字是は／へ改念 わ／え；重做 50 個音檔
+2. 單元頁看不出學到哪 → `viewUnit` 左側進度線（學過打勾、目前＝繼續學習那張，淡彩底＋「目前」、自動捲到）
+3. 字典字卡點不開、英文、沒聲音 →
+   - `#/dict/<JMdict 編號>` 單字頁（`viewDictEntry`），例句裡有這個字的字卡也列出來；中文也能查字典
+   - 發音：預錄 `audio/d/<編號>.mp3`（`tools/make_dict_audio.py`，Nanami 32 kbps，約 2.3 萬個，**產生中、分批上傳**；抓不到才用手機語音）
+   - 中文釋義：`tools/pipeline/dict_zh_prep.py` 依詞頻切 46 檔（`build/dictzh/in-NN.tsv`，每檔 500），代理翻成 `out-NN.tsv`，
+     人工修正 `fix.tsv`，`build_dict.py` 合併成 `z` 欄。**01 已上線；02–07 翻譯中（Haiku，每代理 3 檔）；08–46 未派**。還沒翻到的暫時顯示英文
+   - 教訓：第一批 Haiku 代理「翻譯」是把英文轉小寫交差（整批作廢，放在 `bad-haiku/`）；RULES.md 加「絕對不可以」一節後，第二次的品質可用（約九成好）
+4. 標音放錯字 → `rubytools.split_group_ruby`（一段標音跨好幾個詞時照詞切，全漢字的詞整段標、不逐字撐開字距；對不上 JmdictFurigana 的不切）；
+   `phrase_ruby` 比對讀音時不管標點、數字也標音（修好 8 張整句疊一串的句子卡）；`insert_tildes`（〜 放回原位、讀音欄照寫法帶〜）
+- 另外：數字＋量詞音變檢查 `counter_problems`（抓到「二十分」標成にじゅうふん）
+- 做 hotfix 時用 `build/selection.before-n3.json` 暫時換掉 selection.json 跑 build_data（線上仍是 1,200 張），跑完換回 `selection.n3.json`
 
 ## 工具
 
