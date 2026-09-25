@@ -119,11 +119,6 @@ function currentPath() { return location.hash.replace(/^#\/?/, ''); }
 
 function render(opts = {}) {
   const path = currentPath();
-  if (path === 'look') { // 配色試看（暫時，使用者選定後拿掉）
-    import('./looks.js').then((m) => m.startLooks());
-    location.replace('#/');
-    return;
-  }
   for (const [re, fn] of routes) {
     const m = path.match(re);
     if (m) {
@@ -1013,7 +1008,6 @@ async function boot() {
   renderedHash = location.hash;
   render();
   hideSplash();
-  if (sessionStorage.getItem('tk-look')) import('./looks.js').then((m) => m.startLooks());
 }
 
 boot().catch((err) => {
