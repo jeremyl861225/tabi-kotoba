@@ -14,16 +14,8 @@ TARGET = int(os.environ.get("TK_TARGET", 1200))
 TIER_SIZES = (0.25, 0.375)          # 必備 25%、常用 37.5%、其餘進階
 UNIT_MAX, UNIT_MIN = 20, 4
 THEME_FLOOR = int(os.environ.get("TK_THEME_FLOOR", 30))
-FAMILY = {  # 太小的主題組併到同家族裡最大的一組
-    "GR": "basic", "VB": "basic", "NM": "basic",
-    "AP": "move", "TR": "move", "BT": "move", "DR": "move", "DI": "move",
-    "HT": "stay", "ON": "stay",
-    "RS": "food", "FD": "food", "DK": "food",
-    "SH": "shop", "CV": "shop", "DS": "shop",
-    "MD": "care", "EM": "care",
-    "SG": "city", "SN": "city", "SV": "city",
-    "LS": "listen",
-}
+from themes import ASSIGN
+FAMILY = {t: fam for t, (fam, _) in ASSIGN.items()}  # 太小的主題組併到同家族裡最大的一組（從 themes.py 推，新增主題不會 KeyError）
 
 
 def load_decisions():
