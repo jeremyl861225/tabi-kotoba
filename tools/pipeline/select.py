@@ -165,6 +165,10 @@ def main():
 
     # ---- 擴充：日檢 N5–N3 的新字，依級數分到三條線（沒有旅遊排名，rank 為 None）----
     have_keys = {k for it in sel for k in it["keys"]}
+    # 之前人工或撰寫代理判定刪掉的字（manual.json 的 keep:false），擴充時也不收回（例：箸 已有「お箸」）
+    manp = os.path.join(BUILD, "curate", "manual.json")
+    dropped_keys = {d["key"] for d in json.load(open(manp, encoding="utf-8")) if not d.get("keep")} if os.path.exists(manp) else set()
+    have_keys |= dropped_keys
     have_forms = {(it["head"], kata2hira(it["reading"])) for it in sel}
     exp = []
     for it in load_expansion():
