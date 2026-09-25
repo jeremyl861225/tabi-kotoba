@@ -1,13 +1,14 @@
 /* 旅ことば
-   底色一律米色（深色模式是深咖啡）；各類單元的 Colormind 色票只當點綴：路線、站點、發音鍵、按鈕、路線章。
+   底色白色（2026-09-25 使用者要求，原本米色；深色模式是深咖啡）；各類單元的 Colormind 色票當點綴：路線、站點、發音鍵、按鈕、路線章，
+   首頁的主題家族格與下一站卡片用該色約 10% 的淡彩。
    日文明朝、中文宋體，字重偏細。動態只沿左右換站，短、不回彈、不擋操作。 */
 
 :root {
   /* 米色到深咖啡的暖色階：所有非路線色都從這裡取 */
-  --n0: #fffdf8;
-  --n1: #f5efe3;
-  --n2: #ebe3d4;
-  --n3: #d8ccb7;
+  --n0: #ffffff;
+  --n1: #f5f3ef;   /* 中性淡色塊（「全部」格等） */
+  --n2: #ebe7e0;
+  --n3: #dad4ca;
   --n4: #b2a48c;
   --n5: #786b59;
   --n6: #5d5345;
@@ -15,15 +16,15 @@
   --n8: #29241e;
   --n9: #1c1814;
 
-  --ground: var(--n1);
+  --ground: #ffffff;
   --surface: var(--n0);
   --ink: var(--n9);
   --ink-2: var(--n6);
   --ink-3: var(--n5);
   --hair: var(--n2);
   --trunk: var(--n3);
-  --press: var(--n2);
-  --shadow: 0 1px 0 rgba(60, 45, 25, 0.06), 0 8px 24px rgba(60, 45, 25, 0.07);
+  --press: #efece6;
+  --shadow: 0 0 0 1px rgba(60, 45, 25, 0.09), 0 6px 18px rgba(60, 45, 25, 0.05);   /* 白底上靠細框＋淡陰影分出卡片 */
 
   --ok: #2f7a4f;
   --ng: #b3413a;
@@ -207,8 +208,7 @@ body.no-tabbar .dock { bottom: 0; padding-bottom: calc(12px + var(--safe-b)); }
   position: relative;
   padding: 18px 18px 16px;
   border-radius: 24px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
+  background: var(--bgL, var(--surface));
   color: var(--ink);
   text-decoration: none;
 }
@@ -233,8 +233,7 @@ body.no-tabbar .dock { bottom: 0; padding-bottom: calc(12px + var(--safe-b)); }
 .fam {
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   min-height: 62px; padding: 8px 4px; border: 0; border-radius: 16px;
-  background: var(--surface); color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--hair);
+  background: var(--bgL, var(--n1)); color: var(--ink);
   font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .fam b { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; white-space: nowrap; }
@@ -245,6 +244,10 @@ body.no-tabbar .dock { bottom: 0; padding-bottom: calc(12px + var(--safe-b)); }
 .fam[aria-pressed="true"] { background: var(--line); color: var(--on); box-shadow: none; }
 .fam[aria-pressed="true"] b::before { background: var(--on); }
 .fam[aria-pressed="true"] span { color: var(--on); opacity: 0.85; }
+:root[data-theme="dark"] :is(.next, .fam:not([aria-pressed="true"])) { background: var(--bgD, var(--surface)); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :is(.next, .fam:not([aria-pressed="true"])) { background: var(--bgD, var(--surface)); }
+}
 
 /* 三條線：可收合 */
 .tier { margin-top: 22px; }
@@ -655,7 +658,7 @@ body.no-tabbar:not(:has(.sheet)) .toast { bottom: calc(96px + var(--safe-b)); }
 #splash .sun span {
   font-family: var(--jp); font-weight: 600; line-height: 1;
   font-size: calc(var(--d) * 0.5);
-  color: #f5efe3;                    /* 米色：像紅色紀念章裡留白的字 */
+  color: #ffffff;                    /* 白：白底紅圓就是日章旗，字像紅色紀念章裡留白 */
   animation: tabi-in 0.42s 0.22s var(--ease) both;
 }
 @keyframes sun-rise { from { opacity: 0; transform: translateY(6%) scale(0.82); } to { opacity: 1; transform: none; } }

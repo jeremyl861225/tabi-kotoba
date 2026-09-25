@@ -39,7 +39,7 @@ function isDark() {
   return t === 'dark' || (t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 }
 const strokeOf = (t) => (isDark() ? t.lD : t.lL) || t.field;
-const fieldVars = (t) => `--line:${t.field};--on:${t.on};--stroke:${strokeOf(t)}`;
+const fieldVars = (t) => `--line:${t.field};--on:${t.on};--stroke:${strokeOf(t)};--bgL:${t.bgL};--bgD:${t.bgD}`;
 const strokeVars = (t) => `--lL:${t.lL};--lD:${t.lD};--tL:${t.tL};--tD:${t.tD};${fieldVars(t)}`;
 
 // 進入某一課／某一題時，把該單元的點綴色設到 body；一般畫面還原
@@ -47,14 +47,16 @@ function setField(t) {
   const b = document.body;
   if (!t) {
     b.classList.remove('lesson');
-    ['--line', '--on', '--stroke'].forEach((k) => b.style.removeProperty(k));
+    ['--line', '--on', '--stroke', '--bgL', '--bgD'].forEach((k) => b.style.removeProperty(k));
   } else {
     b.classList.add('lesson');
     b.style.setProperty('--line', t.field);
     b.style.setProperty('--on', t.on);
     b.style.setProperty('--stroke', strokeOf(t));
+    b.style.setProperty('--bgL', t.bgL);
+    b.style.setProperty('--bgD', t.bgD);
   }
-  $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#f5efe3';
+  $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#ffffff';
 }
 
 function unitBadge(u, sm = false) {

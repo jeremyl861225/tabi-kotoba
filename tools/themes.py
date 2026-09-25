@@ -55,8 +55,9 @@ THEMES = [
 ]
 
 
-N1 = "#f5efe3"   # 淺色模式底（米色）
+N1 = "#ffffff"   # 淺色模式底（2026-09-25 使用者要求改白底；原本米色 #f5efe3）
 N9 = "#1c1814"   # 深色模式底／深色文字（深咖啡）
+N8 = "#29241e"   # 深色模式的卡片面
 
 
 def _rgb(h):
@@ -114,7 +115,7 @@ def _pick(fam, role):
 
 
 def theme_list():
-    white, n9, n1 = [1, 1, 1], _rgb(N9), _rgb(N1)
+    white, n9, n1, n8 = [1, 1, 1], _rgb(N9), _rgb(N1), _rgb(N8)
     out = []
     for tid, name, ja in THEMES:
         fam, role = ASSIGN[tid]
@@ -144,6 +145,9 @@ def theme_list():
             "lD": _hex(_toward(c, white, n9, 3.0)),
             "tL": _hex(_toward(c, n9, n1, 4.5)),
             "tD": _hex(_toward(c, white, n9, 4.5)),
+            # 淡彩色塊（首頁的主題家族格、下一站卡片）：白底上約 10% 的主題色、深色模式卡片面上約 18%
+            "bgL": _hex(_mix(white, c, 0.10)),
+            "bgD": _hex(_mix(n8, c, 0.18)),
         })
     return out
 
