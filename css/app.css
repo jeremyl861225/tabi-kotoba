@@ -316,12 +316,11 @@ li.cur .stn-dot { width: 32px; height: 32px; border-width: 7px; }
 .unit-head .badge .code { font-size: 15px; }
 .unit-head .badge .no { font-size: 25px; }
 .word-row .idx {
-  width: 28px; height: 28px; border-radius: 50%;
-  display: grid; place-items: center;
-  font-family: var(--ui); font-size: 13px; font-weight: 600; color: var(--ink-3);
-  box-shadow: inset 0 0 0 1.5px var(--trunk);
+  min-width: 34px;
+  font-family: var(--ui); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;
+  color: var(--ink-3); opacity: 0.7;
 }
-.word-row.seen .idx { background: var(--stroke); color: var(--on, #fff); box-shadow: none; }
+.word-row.seen .idx { color: var(--stroke); opacity: 1; }   /* 看過的字：號碼換成這一課的顏色（2026-09-25 改成淡灰小字，不再圈起來） */
 
 /* ---------- 學習字卡 ---------- */
 .card { text-align: center; }
@@ -667,5 +666,5 @@ body.no-tabbar:not(:has(.sheet)) .toast { bottom: calc(96px + var(--safe-b)); }
 @media (prefers-reduced-motion: reduce) { #splash { display: none; } }
 
 /* 單字編號（照學習順序） */
-.r-no { font-family: var(--ui); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; color: var(--ink-3); margin-right: 8px; }
+.r-no { font-family: var(--ui); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; color: var(--ink-3); opacity: 0.7; margin-right: 8px; }
 .facts .sq { font-family: var(--ui); font-variant-numeric: tabular-nums; }

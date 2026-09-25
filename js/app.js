@@ -260,8 +260,8 @@ function viewUnit(uid) {
   const list = u.cards.map((id, i) => {
     const c = BYID[id];
     return `<a class="row word-row${store.seen[id] ? ' seen' : ''}" href="#/learn/${uid}/${i}" data-autoplay>
-      <span class="idx" aria-hidden="true">${i + 1}</span>
-      <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh"><span class="r-no">${no4(c)}</span>${esc(c.zh)}</span></span>
+      <span class="idx">${no4(c)}</span>
+      <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh">${esc(c.zh)}</span></span>
       ${starBtn(id)}
     </a>`;
   }).join('');
