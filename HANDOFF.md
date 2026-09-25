@@ -59,8 +59,14 @@
 - [x] 選字：`build/expand/curate/in-01…21.json` → `out-NN.tsv`（Sonnet 代理）：收 2,964、刪 47（政治、學術、股市用語）
 - [x] 補充清單 410 條（連接詞 160、敬語 100、招牌菜單 150）→ `tools/pipeline/build_extras.py` → `build/expand/extras.json`
 - [x] select.py 擴充模式：新卡 3,288 張（N5→必備 478、N4→常用 681、N3→進階 2,129），總數 4,488、285 站；擴充站 id 為 `1-VB-x1` 這種，和旅遊站分開；每條線第一站固定旅遊站、新字站以動詞形容詞連接詞優先輪流、平均穿插；之前刪掉的字不收回。備份：`build/selection.before-n3.json`、`ids.before-n3.json`
-- [~] 撰寫：`build/author/in-14…46.json`（每批 100）。14–17（連接詞、敬語、招牌菜單）用 Opus；18–46 用 Sonnet；規格 `PROMPT.md` 末段「擴充卡」
-- [ ] 新站取課名（旅遊站沿用 `unit_names.json`）→ build_data（`jl` 日檢級數、沒有旅遊排名的卡顯示「日檢 Nx」）→ 語音 → e2e → 上線
+- [x] 清理日檢表標記（「(する)」「(かん)」、括號空格、全形～→〜、讀音不含〜）：去掉和連接詞清單重複的 9 張，剩 3,279 張新卡、總數 4,479；
+  **編號沿用清理前的登記**（select 的 `idkey`；撰寫代理的輸出是照編號對的，編號一變就對不上）。in-26…46 已同步改好；18–25 撰寫時是舊寫法，build_data 會再正規化
+- [x] 不到 8 張的擴充小組併進同主題旅遊站的最後一站（23 站變大，課名要重看）；同主題沒有旅遊站的自成一小站（必備線「警官、交番」3 張）
+- [~] 撰寫：`build/author/in-14…46.json`（每批 100）。14–17（連接詞、敬語、招牌菜單）用 Opus；18–46 用 Sonnet（兩個代理、各四批）；規格 `PROMPT.md` 末段「擴充卡」
+- [ ] **語意分站＋課名**：`tools/pipeline/group_prep.py` → `build/expand/group/in-<級>-<主題>.json`（48 條擴充線）＋`RULES.md`；
+  代理寫 `out-<級>-<主題>.json`（[{name, ids}]）與 `rename-out.json`（併進新字的旅遊站改名）；select 重跑就照分組切站、組名當課名
+  （原本照詞頻每 20 張切一站，站內的字不相干，也取不出課名）。改名要併進 `unit_names.json`
+- [ ] build_data（QA：`reading_ok.json` 可寫 `"*"` 當全域白名單；句型例句比對已改成逐段）→ 抽讀 30 張 → 語音 → e2e → CACHE_VERSION v14 → 上線
 
 ## 工具
 
