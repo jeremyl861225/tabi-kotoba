@@ -53,6 +53,11 @@ LEVEL_TIER = {5: 1, 4: 2, 3: 3}   # 日檢 N5→必備線、N4→常用線、N3�
 def load_expansion():
     """擴充到日檢 N3 的新字：curate/in-NN.json＋out-NN.tsv（K 才收），以及 extras.json（連接詞、敬語等直接指定主題的清單）"""
     items = []
+    ex = os.path.join(EXP, "extras.json")
+    if os.path.exists(ex):   # 補充清單在前：連接詞、敬語、招牌菜單有專門整理的中文與說明，和日檢表重複時以它為準
+        for r in json.load(open(ex, encoding="utf-8")):
+            items.append({"key": r["key"], "head": r["head"], "reading": r["reading"], "jl": int(r["level"]), "theme": r["theme"],
+                          "kind": r.get("kind", "w"), "meanings": {"zh": [r["zh"]]} if r.get("zh") else {}, "src_note": r.get("note", ""), "fix": ""})
     for inp in sorted(glob.glob(os.path.join(EXP, "curate", "in-*.json"))):
         outp = inp.replace("in-", "out-").replace(".json", ".tsv")
         if not os.path.exists(outp):
@@ -62,14 +67,14 @@ def load_expansion():
         for r, d in zip(rows, dec):
             if len(d) < 4 or d[0] != r["key"] or d[1] != "K" or d[2] not in THEME_IDS:
                 continue
+            # 日檢表有些一格放兩種寫法（いい; よい、足; 脚）：取第一種，其餘寫進參考說明
+            hs = [x.strip() for x in r["head"].split(";") if x.strip()]
+            rs = [x.strip() for x in r["reading"].split(";") if x.strip()] or [hs[0]]   # 讀音欄空白（片假名詞）就用寫法
+            alt = "、".join(dict.fromkeys(hs[1:] + rs[1:]))
+            r = {**r, "head": hs[0], "reading": rs[0], "note": (r.get("note", "") + (f"也寫作／也念作：{alt}" if alt else "")).strip()}
             items.append({"key": r["key"], "head": r["head"].strip(), "reading": r["reading"].strip(), "jl": int(r["jlpt"]),
                           "theme": d[2], "kind": "p" if d[3] == "p" else "w", "meanings": {k: v for k, v in (("en", [r.get("meaning", "")]), ("zh", r.get("zh", []))) if v and v != [""]},
                           "src_note": r.get("note", ""), "fix": d[4] if len(d) > 4 else ""})
-    ex = os.path.join(EXP, "extras.json")
-    if os.path.exists(ex):
-        for r in json.load(open(ex, encoding="utf-8")):
-            items.append({"key": r["key"], "head": r["head"], "reading": r["reading"], "jl": int(r["level"]), "theme": r["theme"],
-                          "kind": r.get("kind", "w"), "meanings": {"zh": [r["zh"]]} if r.get("zh") else {}, "src_note": r.get("note", ""), "fix": ""})
     return items
 
 
@@ -233,13 +238,17 @@ def main():
             if fam:
                 host = max(fam, key=lambda t: len(eg[t]))
                 eg[host].extend(eg.pop(th))
-        lanes = [split_units(g, tier, th, "x") for th, g in sorted(eg.items(), key=lambda kv: -len(kv[1]))]
+        # 輪流的順序：組句的核心（動詞、形容詞、連接詞、副詞）在前，其餘依字數
+        PRIO = ["VB", "AJ", "CJ", "AV", "NM", "GR", "KG", "LF"]
+        lanes = [split_units(g, tier, th, "x") for th, g in
+                 sorted(eg.items(), key=lambda kv: (PRIO.index(kv[0]) if kv[0] in PRIO else len(PRIO), -len(kv[1])))]
         while any(lanes):
             for lane in lanes:
                 if lane:
                     E.append(lane.pop(0))
         if E and T:
-            merged = sorted([((i + 0.5) / len(T), 0, i) for i in range(len(T))] + [((j + 0.5) / len(E), 1, j) for j in range(len(E))])
+            # 平均穿插；旅遊站的位置用 i/T（第一站在 0）、擴充站用 (j+1)/(E+1)，每條線的第一站一定是旅遊站（必備線從打招呼開始）
+            merged = sorted([(i / len(T), 0, i) for i in range(len(T))] + [((j + 1) / (len(E) + 1), 1, j) for j in range(len(E))])
             units += [T[i] if kind == 0 else E[i] for _, kind, i in merged]
         else:
             units += T + E
