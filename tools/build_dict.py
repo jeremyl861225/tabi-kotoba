@@ -1,7 +1,7 @@
 """離線字典：從 JMdict 常用詞版（jmdict-eng-common，約 2.2 萬詞）抽出寫法、讀音、詞性、英文釋義（搜尋用）與中文釋義（顯示用），
 輸出 data/dict.json 給 App 查字卡以外的字。資料授權 CC BY-SA 4.0（EDRDG），衍生檔沿用同授權。
 """
-import json, os, glob
+import json, os, glob, re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.environ.get("TK_WORK", os.path.expanduser("~/Desktop/Claude code/workspace/work/jp-travel-vocab"))
@@ -29,7 +29,8 @@ def load_zh():
     for f in sorted(glob.glob(os.path.join(WORK, "build", "dictzh", "out-*.tsv"))) + glob.glob(os.path.join(WORK, "build", "dictzh", "fix.tsv")):
         for ln in open(f, encoding="utf-8"):
             p = ln.rstrip("\n").split("\t")
-            if len(p) >= 2 and p[1].strip():
+            # 佔位文字（代理偷懶寫的「翻譯待補」）不算
+            if len(p) >= 2 and p[1].strip() and not re.search(r"待補|待翻|^翻譯$|TODO", p[1]):
                 zh[p[0].strip()] = p[1].strip()
     return zh
 
