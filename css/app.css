@@ -634,3 +634,30 @@ body.no-tabbar:not(:has(.sheet)) .toast { bottom: calc(96px + var(--safe-b)); }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- 開場：日の丸の紅い円と「旅」（2026-09-25 使用者要求） ----------
+   只在開啟 App 時出現（寫在 index.html），約 0.9 秒後淡出；點一下就跳過；資料沒載完就繼續當載入畫面。
+   減少動態效果時不顯示。 */
+#splash {
+  position: fixed; inset: 0; z-index: 1000;
+  display: grid; place-items: center;
+  background: var(--ground);
+  transition: opacity 0.3s ease;
+}
+#splash.out { opacity: 0; pointer-events: none; }
+#splash .sun {
+  --d: min(52vw, 240px);
+  width: var(--d); height: var(--d); border-radius: 50%;
+  background: #bc002d;               /* 日章旗的紅 */
+  display: grid; place-items: center;
+  animation: sun-rise 0.56s var(--ease) both;
+}
+#splash .sun span {
+  font-family: var(--jp); font-weight: 600; line-height: 1;
+  font-size: calc(var(--d) * 0.5);
+  color: #f5efe3;                    /* 米色：像紅色紀念章裡留白的字 */
+  animation: tabi-in 0.42s 0.22s var(--ease) both;
+}
+@keyframes sun-rise { from { opacity: 0; transform: translateY(6%) scale(0.82); } to { opacity: 1; transform: none; } }
+@keyframes tabi-in { from { opacity: 0; transform: translateY(10%); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { #splash { display: none; } }

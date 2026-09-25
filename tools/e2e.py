@@ -28,7 +28,19 @@ def main():
 
     with sync_playwright() as p:
         b = p.chromium.launch()
-        ctx = b.new_context(viewport={"width": 375, "height": 740}, device_scale_factor=2, is_mobile=True, has_touch=True, service_workers="block")
+        # 開場動畫：會自己消失、點一下可以跳過（主要測試用減少動態效果，開場不顯示、不擋點擊）
+        sctx = b.new_context(viewport={"width": 375, "height": 740}, is_mobile=True, has_touch=True, service_workers="block")
+        sp = sctx.new_page()
+        sp.goto(BASE, wait_until="commit")
+        sp.wait_for_selector("#splash .sun", state="attached")
+        sp.wait_for_function("!document.getElementById('splash')", timeout=4000)
+        sp.goto(BASE + "?reload=1#/browse", wait_until="commit")  # 只換 # 後面不會重新載入，開場不會再出現
+        sp.wait_for_selector("#splash", state="attached")
+        sp.dispatch_event("#splash", "pointerdown")
+        sp.wait_for_function("!document.getElementById('splash')", timeout=1500)
+        sctx.close()
+
+        ctx = b.new_context(viewport={"width": 375, "height": 740}, device_scale_factor=2, is_mobile=True, has_touch=True, service_workers="block", reduced_motion="reduce")
         pg = ctx.new_page()
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -82,6 +94,16 @@ def main():
             pg.wait_for_timeout(150)
             ids = pg.eval_on_selector_all(".row", "els => els.map(e => e.getAttribute('href'))")
             check(f"#/card/{target['id']}" in ids, f"搜尋「{q}」找不到 {target['id']}")
+
+        # 篩選標籤列：捲到右邊再點，列表不能跳回最前面
+        pg.evaluate("document.querySelectorAll('.chips')[1].scrollLeft = 400")
+        x0 = pg.evaluate("document.querySelectorAll('.chips')[1].scrollLeft")
+        pg.evaluate("""(() => { const row = document.querySelectorAll('.chips')[1]; const box = row.getBoundingClientRect();
+            [...row.querySelectorAll('[data-f-th]')].find((b) => { const r = b.getBoundingClientRect(); return r.left > box.left + 4 && r.right < box.right - 4; }).click(); })()""")
+        pg.wait_for_timeout(200)
+        x1 = pg.evaluate("document.querySelectorAll('.chips')[1].scrollLeft")
+        check(x0 > 0 and abs(x1 - x0) < 40, f"點主題標籤後標籤列跳動：{x0} → {x1}")
+        pg.click("[data-f-th='']")
 
         # 測驗：第一課全部作答到終點
         u = data["units"][0]

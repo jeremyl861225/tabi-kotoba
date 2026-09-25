@@ -434,6 +434,24 @@ function viewBrowse() {
   loadDict().then(() => { if (browse.q.trim()) renderResults(); }).catch(() => {});
 }
 
+// 點篩選標籤：只更新選取狀態與結果清單，不重畫整頁——橫向捲動的標籤列停在原位（2026-09-25 使用者要求）
+function syncBrowseChips(tapped) {
+  document.querySelectorAll('[data-f-tier]').forEach((b) => b.setAttribute('aria-pressed', String(browse.tier === +b.dataset.fTier)));
+  document.querySelectorAll('[data-f-th]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.fTh === '' ? !browse.th : browse.th === b.dataset.fTh)));
+  const s = document.querySelector('[data-f-star]');
+  if (s) s.setAttribute('aria-pressed', String(!!browse.star));
+  // 點到只露出一半的標籤：把列表捲到剛好完整露出
+  const row = tapped && tapped.closest('.chips');
+  if (row) {
+    const r = tapped.getBoundingClientRect();
+    const box = row.getBoundingClientRect();
+    const pad = 12;
+    if (r.right > box.right - pad) row.scrollBy({ left: r.right - box.right + pad, behavior: 'smooth' });
+    else if (r.left < box.left + pad) row.scrollBy({ left: r.left - box.left - pad, behavior: 'smooth' });
+  }
+  renderResults();
+}
+
 // 字典（字卡以外的字）
 let cardForms = null;
 function dictHTML(q) {
@@ -835,15 +853,16 @@ document.addEventListener('click', async (e) => {
   if (d.more !== undefined) { browse.shown += 120; renderResults(); return; }
   if (d.fam !== undefined) { store.home = store.home || { fam: '', open: {} }; store.home.fam = d.fam; save(); const y = window.scrollY; viewHome(); window.scrollTo(0, y); return; }
   if (d.jump !== undefined) { e.preventDefault(); document.getElementById(`tier-${d.jump}`).scrollIntoView({ block: 'start' }); return; }
-  if (d.fTier !== undefined) { browse.tier = +d.fTier; browse.shown = 80; viewBrowse(); return; }
-  if (d.fTh !== undefined) { browse.th = d.fTh; browse.shown = 80; viewBrowse(); return; }
-  if (d.fStar !== undefined) { browse.star = !browse.star; browse.shown = 80; viewBrowse(); return; }
+  if (d.fTier !== undefined) { browse.tier = +d.fTier; browse.shown = 80; syncBrowseChips(el); return; }
+  if (d.fTh !== undefined) { browse.th = d.fTh; browse.shown = 80; syncBrowseChips(el); return; }
+  if (d.fStar !== undefined) { browse.star = !browse.star; browse.shown = 80; syncBrowseChips(el); return; }
   if (d.unitQuiz) { const u = UNIT[d.unitQuiz]; startQuiz(u.cards.map((id) => BYID[id]), u.title, { unit: u.id, all: true }); return; }
   if (d.starQuiz !== undefined) { startQuiz(CARDS.filter((c) => isStarred(c.id)), '不熟單字'); return; }
-  if (d.qsScope) { quizSetup.scope = d.qsScope; viewQuizSetup(); return; }
-  if (d.qsTier) { quizSetup.tier = +d.qsTier; viewQuizSetup(); return; }
-  if (d.qsTh) { quizSetup.th = d.qsTh; viewQuizSetup(); return; }
-  if (d.qc !== undefined) { store.settings.quizCount = +d.qc; save(); viewQuizSetup(); return; }
+  const redrawSetup = () => { const y = window.scrollY; viewQuizSetup(); window.scrollTo(0, y); };
+  if (d.qsScope) { quizSetup.scope = d.qsScope; redrawSetup(); return; }
+  if (d.qsTier) { quizSetup.tier = +d.qsTier; redrawSetup(); return; }
+  if (d.qsTh) { quizSetup.th = d.qsTh; redrawSetup(); return; }
+  if (d.qc !== undefined) { store.settings.quizCount = +d.qc; save(); redrawSetup(); return; }
   if (d.quizStart !== undefined) {
     const labels = { tier: TIER[quizSetup.tier].name, theme: THEME[quizSetup.th || DATA.themes[0].id].name, unit: (UNIT[quizSetup.unit] || UNITS[0]).title, star: '不熟單字', wrong: '曾答錯的單字', all: '全部單字' };
     startQuiz(scopeCards(), labels[quizSetup.scope], quizSetup.scope === 'unit' ? { unit: quizSetup.unit } : {});
@@ -953,6 +972,19 @@ async function runDownload(tier, btn) {
 }
 
 /* ---------- 啟動 ---------- */
+// 開場畫面：至少停到開啟後 0.9 秒（動畫播完），資料載好才淡出；點一下立刻跳過
+const splash = document.getElementById('splash');
+const SPLASH_MIN = 900;
+function hideSplash(now = false) {
+  if (!splash || splash.classList.contains('out')) return;
+  const wait = now ? 0 : Math.max(0, SPLASH_MIN - performance.now());
+  setTimeout(() => {
+    splash.classList.add('out');
+    setTimeout(() => splash.remove(), 400);
+  }, wait);
+}
+if (splash) splash.addEventListener('pointerdown', () => hideSplash(true), { once: true });
+
 async function boot() {
   applyTheme();
   const res = await fetch('data/cards.json');
@@ -973,10 +1005,12 @@ async function boot() {
   }
   renderedHash = location.hash;
   render();
+  hideSplash();
 }
 
 boot().catch((err) => {
   $app.innerHTML = `<div class="empty"><b>字卡資料載入失敗</b>請連上網路後重新開啟。（${esc(err.message)}）</div>`;
+  hideSplash(true);
 });
 
 if ('serviceWorker' in navigator) {
