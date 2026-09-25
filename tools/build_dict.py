@@ -25,7 +25,8 @@ def pos_label(codes):
 def load_zh():
     """代理翻好的中文釋義：build/dictzh/out-NN.tsv（jmid<TAB>中文），見 pipeline/dict_zh_prep.py"""
     zh = {}
-    for f in sorted(glob.glob(os.path.join(WORK, "build", "dictzh", "out-*.tsv"))):
+    # fix.tsv：人工改過的（放最後，蓋過代理的翻譯）
+    for f in sorted(glob.glob(os.path.join(WORK, "build", "dictzh", "out-*.tsv"))) + glob.glob(os.path.join(WORK, "build", "dictzh", "fix.tsv")):
         for ln in open(f, encoding="utf-8"):
             p = ln.rstrip("\n").split("\t")
             if len(p) >= 2 and p[1].strip():
