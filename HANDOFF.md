@@ -48,28 +48,29 @@
 
 代理回報、可再斟酌的卡（不影響上線）：0889 移動博物館、0903 形態展示、0614 解説室 等博物館專門用語偏冷門；1016 空き部屋はありますか 與 0813 意思重疊；1126／1127／1133／1134 日期用阿拉伯數字（前面的日期卡用漢字數字）。
 
-## 進行中：擴充到日檢 N3（2026-09-25 使用者要求）
+## 已完成：擴充到日檢 N3（2026-09-26 上線 v15，commit 2dd14d99）
 
+**4,479 張字卡、314 站**（旅遊 1,200 張／88 站＋日檢 N5–N3 新字 3,279 張／226 站），e2e `--all-cards` 通過、qa.json 清零、線上驗證過。
 目標：路上招牌、菜單看得懂，店員敬語聽得懂，能自己組句（**連接詞加大篇幅**）；新字**混進現有三條線**（N5→必備、N4→常用、N3→進階），
-編號照學習順序重排。來源：日檢單字表（`workspace/.../dict/jlpt/n5–n3.csv`，open-anki-jlpt-decks MIT，資料源自 tanos.co.uk）＋三份補充清單
-（`build/expand/connectives.json`、`keigo.json`、`signs_menus.json`）。
+編號照學習順序（0001–4479）。來源：日檢單字表（`workspace/.../dict/jlpt/n5–n3.csv`，open-anki-jlpt-decks MIT，資料源自 tanos.co.uk）＋三份補充清單
+（`build/expand/connectives.json`、`keigo.json`、`signs_menus.json`）。做法已寫成 skill 的 `references/expansion.md`。
 
-- [x] `tools/pipeline/expand_prep.py`：日檢 3,423 條 → 扣掉字卡已有 412 → 新候選 3,011（N5 463、N4 585、N3 1,963）
-- [x] 新主題：VB 常用動詞、AJ 形容詞、AV 副詞、CJ 連接詞與句型（基本家族）、LF 生活用語（觀光生活家族）、KG 敬語（店員廣播家族）
-- [x] 選字：`build/expand/curate/in-01…21.json` → `out-NN.tsv`（Sonnet 代理）：收 2,964、刪 47（政治、學術、股市用語）
-- [x] 補充清單 410 條（連接詞 160、敬語 100、招牌菜單 150）→ `tools/pipeline/build_extras.py` → `build/expand/extras.json`
-- [x] select.py 擴充模式：新卡 3,288 張（N5→必備 478、N4→常用 681、N3→進階 2,129），總數 4,488、285 站；擴充站 id 為 `1-VB-x1` 這種，和旅遊站分開；每條線第一站固定旅遊站、新字站以動詞形容詞連接詞優先輪流、平均穿插；之前刪掉的字不收回。備份：`build/selection.before-n3.json`、`ids.before-n3.json`
-- [x] 清理日檢表標記（「(する)」「(かん)」、括號空格、全形～→〜、讀音不含〜）：去掉和連接詞清單重複的 9 張，剩 3,279 張新卡、總數 4,479；
-  **編號沿用清理前的登記**（select 的 `idkey`；撰寫代理的輸出是照編號對的，編號一變就對不上）。in-26…46 已同步改好；18–25 撰寫時是舊寫法，build_data 會再正規化
-- [x] 不到 8 張的擴充小組併進同主題旅遊站的最後一站（23 站變大，課名要重看）；同主題沒有旅遊站的自成一小站（必備線「警官、交番」3 張）
-- [~] 撰寫：`build/author/in-14…46.json`（每批 100）。14–17（連接詞、敬語、招牌菜單）用 Opus；18–46 用 Sonnet（兩個代理、各四批）；規格 `PROMPT.md` 末段「擴充卡」。
-  **14–25 已完成並驗收**（1,200 張；抽讀＋QA 修 5 張標音、`fix.json` 共 16 條、`reading_ok.json` 逐張確認）；26–29 撰寫中；30–46 未派。
-  2026-09-25 19:31 撞 session 用量上限（22:20 重置）兩個代理一起停，26 批一條都沒寫、分站做完 24 條線
-- [x] 已寫好的卡先產音檔（manifest 雜湊，文字改了會自動重做）：9,034 個、0 失敗
-- [x] **語意分站＋課名**（48 條線 226 站全部完成；主線程改掉 14 個勉強的站名、旅遊站只採納 7 個改名，其餘沿用；全 App 314 站無重名）：`tools/pipeline/group_prep.py` → `build/expand/group/in-<級>-<主題>.json`（48 條擴充線）＋`RULES.md`；
-  代理寫 `out-<級>-<主題>.json`（[{name, ids}]）與 `rename-out.json`（併進新字的旅遊站改名）；select 重跑就照分組切站、組名當課名
-  （原本照詞頻每 20 張切一站，站內的字不相干，也取不出課名）。改名要併進 `unit_names.json`
-- [ ] build_data（QA：`reading_ok.json` 可寫 `"*"` 當全域白名單；句型例句比對已改成逐段）→ 抽讀 30 張 → 語音 → e2e → CACHE_VERSION v14 → 上線
+- 選字：3,011 候選 → 收 2,964（Sonnet 分流）＋補充清單 410 → 清標記、去重後新卡 3,279
+- 撰寫：`build/author/in-14…46.json` → `out-*.json`（14–17 Opus、18–46 Sonnet，每代理四批）；`fix.json` 修 28 張（標音、例句用錯字義）；
+  `reading_ok.json` 約 400 條逐張確認的分析器誤報（`"*"` 開頭是全域）；`example_ok.json` 11 張
+- 分站：`tools/pipeline/group_prep.py` → `build/expand/group/out-<級>-<主題>.json`（48 條線 226 站，主線程改掉 14 個勉強的站名）；
+  併進新字的旅遊站只採納 7 個改名（`unit_names.json`）
+- 音檔：新增 13,116 個（字卡音檔總計約 190 MB：必備 29、常用 47、進階 116 MB）
+- 備份：`build/selection.before-n3.json`（1,200 張版）、`selection.n3.json`（現行）；**`selection.json` 現在就是 N3 版**
+
+### 字典（字卡以外的字，2026-09-26 完成）
+- **22,639 詞全部中文釋義**（Haiku 代理翻譯，`build/dictzh/in-01…46.tsv` → `out-*.tsv`，人工修正 `fix.tsv`，`check.py` 驗收）；
+  `build_dict.py` 只收格式正確的行，並用 `OPENCC_FIX` 改回 opencc 誤轉的字
+- 字典詞可點開（`#/dict/<JMdict 編號>`），發音用預錄音檔 `audio/d/<編號>.mp3`（22,639 個、約 100 MB，點了才抓）
+
+### 之後可做（沒有使用者要求，列著備查）
+- 字典釋義是 AI 翻譯（約九成好）：看到錯的直接寫進 `build/dictzh/fix.tsv`（依編號）再跑 `build_dict.py`
+- impeccable 收尾審查（finish reviewer＋DESIGN.md）、iPhone 實機離線測試（原本就列著的待辦）
 
 ## 2026-09-25 晚：使用者回報四個問題（已修正上線 v14，commit 94d4252）
 
