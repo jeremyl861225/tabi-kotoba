@@ -16,7 +16,7 @@ TIERS = [{"id": 1, "name": "必備"}, {"id": 2, "name": "常用"}, {"id": 3, "na
 jp2t = opencc.OpenCC("jp2t")
 s2tw = opencc.OpenCC("s2tw")
 # 台灣常用、OpenCC 卻會轉成「臺／隻／註」的字，不算簡體
-TW_OK = set("台只注念游了")   # opencc 在台灣用法上的誤報：懷念→懷唸、游了泳→遊了泳、說明了→說明瞭
+TW_OK = set("台只注念游了伙雇划污")   # opencc 在台灣用法上的誤報：懷念→懷唸、游了泳→遊了泳、說明了→說明瞭、傢伙→傢夥、划算→劃算
 
 
 def odd_chars(s):
