@@ -65,7 +65,8 @@ def same_as_chinese(head, zh):
 def word_tts(head, read, kind, markup):
     if kind == "p":
         return tts_text(markup)
-    head = head.replace("〜", "").replace("～", "")   # 句型的「〜」不念
+    # 句型的「〜」：開頭的不念，中間的換成停頓（〜から〜まで → から、まで）
+    head = re.sub(r"^[〜～]+|[〜～]+$", "", head).replace("〜", "、").replace("～", "、")
     read = read.replace("〜", "").replace("～", "")
     if not has_kanji(head):
         return head

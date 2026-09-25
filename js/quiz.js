@@ -37,7 +37,8 @@ function shuffle(a) {
 }
 
 const zhKey = (c) => c.zh.split(/[、，,；;／/（(]/)[0].trim();
-const spellable = (card) => card.k !== 'p' && [...card.r].length >= 2 && [...card.r].length <= 10 && !/[〜～\s]/.test(card.r);
+// 句型（寫法裡有〜，例如「〜から〜まで」）不出拼字題：讀音去掉〜之後拼不出有意義的字
+const spellable = (card) => card.k !== 'p' && [...card.r].length >= 2 && [...card.r].length <= 10 && !/[〜～\s]/.test(card.r) && !/[〜～]/.test(card.w);
 
 function eligible(card, type) {
   if (type === 'kan') return card.k !== 'p' && hasKanji(plain(card.w)) && card.r.length <= 14;
