@@ -55,7 +55,7 @@ THEMES = [
 ]
 
 
-N1 = "#ffffff"   # 淺色模式底（2026-09-25 使用者要求改白底；原本米色 #f5efe3）
+N1 = "#f7f5f0"   # 淺色模式底：米白（2026-09-25 使用者先要白底，再說「底色不要這麼白」；原本米色 #f5efe3）
 N9 = "#1c1814"   # 深色模式底／深色文字（深咖啡）
 N8 = "#29241e"   # 深色模式的卡片面
 
@@ -120,7 +120,9 @@ def theme_list():
     for tid, name, ja in THEMES:
         fam, role = ASSIGN[tid]
         pal = PALETTES[fam]
-        c = _pick(fam, role)
+        # 2026-09-25 使用者指出首頁「醫療緊急」色塊和下一站（看醫生）卡片顏色不同：同一家族的主題一律用家族主色 M，
+        # 顏色＝分類。ASSIGN 裡的 role 保留作紀錄，不再決定顏色。
+        c = _pick(fam, "M")
         dark = _rgb(pal[4])
         # 色場文字：白字或該色票的深字，取對比高者；都不到 4.5 就把色場往深字方向壓到白字過關
         cw, cd = contrast(c, white), contrast(c, dark)
@@ -145,8 +147,8 @@ def theme_list():
             "lD": _hex(_toward(c, white, n9, 3.0)),
             "tL": _hex(_toward(c, n9, n1, 4.5)),
             "tD": _hex(_toward(c, white, n9, 4.5)),
-            # 淡彩色塊（首頁的主題家族格、下一站卡片）：白底上約 10% 的主題色、深色模式卡片面上約 18%
-            "bgL": _hex(_mix(white, c, 0.10)),
+            # 淡彩（首頁的下一站卡片）：白上 12% 的主題色、深色模式卡片面上 18%
+            "bgL": _hex(_mix(white, c, 0.12)),
             "bgD": _hex(_mix(n8, c, 0.18)),
         })
     return out

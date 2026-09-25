@@ -56,7 +56,7 @@ function setField(t) {
     b.style.setProperty('--bgL', t.bgL);
     b.style.setProperty('--bgD', t.bgD);
   }
-  $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#ffffff';
+  $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#f7f5f0';
 }
 
 function unitBadge(u, sm = false) {
