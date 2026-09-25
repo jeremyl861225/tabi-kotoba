@@ -130,6 +130,25 @@ def sudachi_reading_spans(text):
     return out
 
 
+_ROW = {v: k for k, vs in {"a": "あかさたなはまやらわがざだばぱぁゃ", "i": "いきしちにひみりぎじぢびぴぃ", "u": "うくすつぬふむゆるぐずづぶぷぅゅ",
+                            "e": "えけせてねへめれげぜでべぺぇ", "o": "おこそとのほもよろをごぞどぼぽぉょ"}.items() for v in vs}
+
+
+def long_vowel_forms(s):
+    """分析器的長音「ー」換回平假名寫法（ぎょーざ → ぎょうざ；e 段可寫い或え、o 段可寫う或お）"""
+    outs = {"": ""}
+    for ch in s:
+        nxt = {}
+        for k in outs:
+            if ch == "ー" and k and _ROW.get(k[-1]):
+                for v in {"a": "あ", "i": "い", "u": "う", "e": "いえ", "o": "うお"}[_ROW[k[-1]]]:
+                    nxt[k + v] = ""
+            else:
+                nxt[k + ch] = ""
+        outs = dict(list(nxt.items())[:16])
+    return set(outs)
+
+
 def check_sentence(markup):
     """比對標記的讀音與 Sudachi 的讀音；回傳不一致的片段 [(base, rt, sudachi)]"""
     text = plain(markup)
@@ -159,7 +178,7 @@ def check_sentence(markup):
                     marked += kata2hira(b2[max(0, cs - seg_s):ce - seg_s])
             p2 += ln
         sud = "".join(kata2hira(t[3]) for t in cover)
-        if marked != sud:
+        if marked != sud and ("ー" not in sud or marked not in long_vowel_forms(sud)):
             bad.append((base, rt, sud, text[cs:ce]))
     # 同一範圍只報一次
     seen, uniq = set(), []

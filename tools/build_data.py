@@ -65,6 +65,8 @@ def same_as_chinese(head, zh):
 def word_tts(head, read, kind, markup):
     if kind == "p":
         return tts_text(markup)
+    # 括號：漢字註記不念（〜そうだ（伝聞））、假名照念（〜（ら）れる → られる）
+    head = re.sub(r"[（(]([^）)]*)[）)]", lambda m: "" if has_kanji(m.group(1)) else m.group(1), head)
     # 句型的「〜」：開頭的不念，中間的換成停頓（〜から〜まで → から、まで）
     head = re.sub(r"^[〜～]+|[〜～]+$", "", head).replace("〜", "、").replace("～", "、")
     read = read.replace("〜", "").replace("～", "")
@@ -75,12 +77,46 @@ def word_tts(head, read, kind, markup):
     return head if sud == kata2hira(read) else read
 
 
-def head_in_example(head, ex):
+def pattern_in_example(head, p):
+    """句型（〜から〜まで、〜ている、お〜になる）：每一段依序出現在例句的原文或詞典形串裡"""
+    h = re.sub(r"[（(][^）)]*[一-鿿][^）)]*[）)]", "", head)          # 〜そうだ（伝聞）→ 〜そうだ
+    parts = [x for x in re.split(r"[〜～]", re.sub(r"[（()）]", "", h)) if x]
+    if not parts:
+        return False
+    toks = list(sudachi_tokens(p))
+    lem = "".join(t.dictionary_form() for t in toks)
+    def stem(x):   # 可活用的結尾拿掉：ている→てい、ようだ→よう、にする→にす
+        return re.sub(r"(だ|ない|する|る|う|く|す|つ|ぬ|む|ぶ|ぐ|い)$", "", x) or x
+    for src in (p, lem):
+        pos, ok = 0, True
+        for x in parts:
+            for cand in (x, stem(x)):
+                i = src.find(cand, pos)
+                if i >= 0:
+                    pos = i + len(cand)
+                    break
+            else:
+                ok = False
+                break
+        if ok:
+            return True
+    return False
+
+
+def head_in_example(head, ex, read=""):
     """例句裡有沒有用到這個字（動詞形容詞可活用）"""
     p = plain(ex)
     h = head.replace("〜", "").replace("～", "")
     if h in p:
         return True
+    if re.search(r"[〜～]", head) and pattern_in_example(head, p):
+        return True
+    # 假名／漢字寫法不同（りっぱ → 立派、にぎやか → 賑やか）：比讀音
+    if read and len(read) >= 3:
+        rp = kata2hira(reading(ex))
+        r = kata2hira(read)
+        if r in rp or (len(r) >= 4 and r[:-1] in rp):
+            return True
     # 〇 是填數字的空格（バス〇分 → バス5分）
     if "〇" in h and re.search(re.escape(h).replace("〇", "[0-9０-９一二三四五六七八九十百〇何]+"), p):
         return True
@@ -129,8 +165,10 @@ def main():
             head = a["head"]
         if a.get("reading"):
             read = a["reading"]
+        # 全形～統一成〜；讀音不含〜（日檢表的「～人／～じん」，撰寫代理有時照抄）
+        head, read = head.replace("～", "〜"), read.replace("〜", "").replace("～", "")
         w = phrase_ruby(head, read) if kind == "p" else word_ruby(head, read)
-        strip_w = lambda x: kata2hira(x).replace("〜", "").replace("～", "")
+        strip_w = lambda x: re.sub(r"[〜～（）()]", "", kata2hira(x))
         if strip_w(reading(w)) != strip_w(read):
             qa["head_ruby_mismatch"].append([c["id"], head, read, w])
         ex = clean_markup(a.get("ex", "").strip())
@@ -163,10 +201,10 @@ def main():
         un = uncovered_kanji(ex)
         if un:
             qa["uncovered_kanji"].append([c["id"], ex, "".join(un)])
-        bad = [b for b in check_sentence(ex) if (c["id"], b[0], b[1]) not in reading_ok]
+        bad = [b for b in check_sentence(ex) if (c["id"], b[0], b[1]) not in reading_ok and ("*", b[0], b[1]) not in reading_ok]
         if bad:
             qa["reading_mismatch"].append([c["id"], ex, [list(b) for b in bad]])
-        if kind != "p" and not head_in_example(head, ex):
+        if kind != "p" and not head_in_example(head, ex, read):
             qa["head_not_in_example"].append([c["id"], head, plain(ex)])
         if len(plain(ex)) > 40:
             qa["long_example"].append([c["id"], plain(ex)])
@@ -180,8 +218,8 @@ def main():
         ids = [x for x in u["cards"] if x not in dropped]
         if not ids:
             continue
-        title = names.get(u["id"]) or tname[u["th"]] + (f" {u['part']}" if u["parts"] > 1 else "")
-        units.append({**u, "cards": ids, "title": title})
+        title = names.get(u["id"]) or u.get("name") or tname[u["th"]] + (f" {u['part']}" if u["parts"] > 1 else "")
+        units.append({**{k: v for k, v in u.items() if k not in ("name", "grew")}, "cards": ids, "title": title})
     # 編號：照學習順序（必備→常用→進階，每條線由第一站起，站內照字表順序）從 0001 編起（2026-09-25 使用者要求）
     by_id = {c["id"]: c for c in cards}
     seq = 0
@@ -189,7 +227,7 @@ def main():
         for cid in u["cards"]:
             seq += 1
             by_id[cid]["sq"] = seq
-    missing = [u["id"] for u in units if u["id"] not in names]
+    missing = [u["id"] for u in units if u["id"] not in names and not u.get("name")]
     if names and missing:
         qa["unit_name_missing"] = missing
     dup = [t for t, n in collections.Counter(u["title"] for u in units).items() if n > 1]

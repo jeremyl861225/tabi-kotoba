@@ -34,6 +34,38 @@ def split_units(g, tier, th, tag):
     return out
 
 
+EXP_SMALL = 8
+GROUPS = {}   # 擴充字的語意分組：build/expand/group/out-<級>-<主題>.json（代理依意思分站並命名，見 group_prep.py）
+
+
+def group_units(g, tier, th):
+    """擴充字一條線切成站：有語意分組就照分組（每組一站、組名＝課名），否則照詞頻平均切"""
+    grp = GROUPS.get(f"{tier}-{th}")
+    if not grp:
+        return split_units(g, tier, th, "x")
+    by_id = {x["id"]: x for x in g}
+    out, used = [], set()
+    for gi in grp:
+        part = [by_id[i] for i in gi["ids"] if i in by_id and i not in used]
+        used |= {x["id"] for x in part}
+        if part:
+            out.append((gi["name"], part))
+    rest = [x for x in g if x["id"] not in used]
+    if rest:
+        print(f"注意：{tier}-{th} 有 {len(rest)} 張不在分組裡（例：{[x['head'] for x in rest[:5]]}），接在最後一站之後")
+        for p in split_units(rest, tier, th, "x"):
+            out.append((None, [by_id[i] for i in p["cards"]]))
+    units = []
+    for p, (name, part) in enumerate(out):
+        own = [x["no"] for x in part if x["theme"] == th]
+        u = {"id": f"{tier}-{th}-x{p + 1}", "t": tier, "th": th, "part": p + 1, "parts": len(out),
+             "cards": [x["id"] for x in part], "from": min(own) if own else part[0]["no"], "to": max(own) if own else part[-1]["no"]}
+        if name:
+            u["name"] = name
+        units.append(u)
+    return units
+
+
 def load_decisions():
     dec = {}
     for f in sorted(glob.glob(os.path.join(BUILD, "curate", "out-*.json"))):
@@ -50,13 +82,34 @@ EXP = os.path.join(BUILD, "expand")
 LEVEL_TIER = {5: 1, 4: 2, 3: 3}   # 日檢 N5→必備線、N4→常用線、N3→進階線（2026-09-25 使用者：基礎字混進現有三條線）
 
 
+def clean_jlpt(head, read):
+    """日檢表的標記清掉：「(する)」「(かん)」、括號與空格、全形～ 統一成 〜、讀音不含〜。回傳 (寫法, 讀音, 說明)"""
+    note = ""
+    if re.search(r"\s*[（(]する[)）]", read):
+        note = f"加「する」當動詞：{head}する"
+    head = re.sub(r"\s*[（(](?:する|かん)[)）]", "", head)
+    read = re.sub(r"\s*[（(](?:する|かん)[)）]", "", read)
+    m = re.match(r"^([^～〜]+?)\s*[（(]([^()（）]+)[)）]$", head)   # パート (タイム) → パート，全名寫進說明
+    if m:
+        note = f"全名「{m.group(1)}{m.group(2)}」"
+        head, read = m.group(1), re.sub(r"\s*[（(][^()（）]+[)）]$", "", read)
+    head = re.sub(r"[()\s]", "", head).replace("～", "〜")   # ～(て) しまう → 〜てしまう
+    read = re.sub(r"[()\s]", "", read).replace("～", "〜")
+    if read.startswith("〜") and not head.startswith("〜"):   # 建て／〜だて → 〜建て
+        head = "〜" + head
+    if read.endswith("〜") and not head.endswith("〜"):       # 来／らい〜 → 来〜
+        head += "〜"
+    return head, read.replace("〜", ""), note
+
+
 def load_expansion():
     """擴充到日檢 N3 的新字：curate/in-NN.json＋out-NN.tsv（K 才收），以及 extras.json（連接詞、敬語等直接指定主題的清單）"""
     items = []
     ex = os.path.join(EXP, "extras.json")
     if os.path.exists(ex):   # 補充清單在前：連接詞、敬語、招牌菜單有專門整理的中文與說明，和日檢表重複時以它為準
         for r in json.load(open(ex, encoding="utf-8")):
-            items.append({"key": r["key"], "head": r["head"], "reading": r["reading"], "jl": int(r["level"]), "theme": r["theme"],
+            items.append({"key": r["key"], "head": r["head"].replace("～", "〜"), "reading": r["reading"].replace("〜", "").replace("～", ""), "jl": int(r["level"]), "theme": r["theme"],
+                          "idkey": f"{r['head']}|{kata2hira(r['reading'])}",
                           "kind": r.get("kind", "w"), "meanings": {"zh": [r["zh"]]} if r.get("zh") else {}, "src_note": r.get("note", ""), "fix": ""})
     for inp in sorted(glob.glob(os.path.join(EXP, "curate", "in-*.json"))):
         outp = inp.replace("in-", "out-").replace(".json", ".tsv")
@@ -72,13 +125,19 @@ def load_expansion():
             rs = [x.strip() for x in r["reading"].split(";") if x.strip()] or [hs[0]]   # 讀音欄空白（片假名詞）就用寫法
             alt = "、".join(dict.fromkeys(hs[1:] + rs[1:]))
             r = {**r, "head": hs[0], "reading": rs[0], "note": (r.get("note", "") + (f"也寫作／也念作：{alt}" if alt else "")).strip()}
-            items.append({"key": r["key"], "head": r["head"].strip(), "reading": r["reading"].strip(), "jl": int(r["jlpt"]),
+            # 編號登記用清理前的寫法（清理規則是後來加的，編號不能變：撰寫代理的輸出是照編號對的）
+            idkey = f"{r['head'].strip()}|{kata2hira(r['reading'].strip())}"
+            h, rd, cn = clean_jlpt(r["head"].strip(), r["reading"].strip())
+            r = {**r, "head": h, "reading": rd, "note": "；".join(x for x in (r["note"], cn) if x).replace("～", "〜")}
+            items.append({"key": r["key"], "head": r["head"].strip(), "reading": r["reading"].strip(), "jl": int(r["jlpt"]), "idkey": idkey,
                           "theme": d[2], "kind": "p" if d[3] == "p" else "w", "meanings": {k: v for k, v in (("en", [r.get("meaning", "")]), ("zh", r.get("zh", []))) if v and v != [""]},
                           "src_note": r.get("note", ""), "fix": d[4] if len(d) > 4 else ""})
     return items
 
 
 def main():
+    for f in glob.glob(os.path.join(EXP, "group", "out-*.json")):
+        GROUPS[os.path.basename(f)[4:-5]] = json.load(open(f, encoding="utf-8"))
     cands = {c["key"]: c for c in json.load(open(os.path.join(BUILD, "candidates.json"), encoding="utf-8"))}
     dec = load_decisions()
     missing = [k for k in cands if k not in dec]
@@ -169,10 +228,11 @@ def main():
     manp = os.path.join(BUILD, "curate", "manual.json")
     dropped_keys = {d["key"] for d in json.load(open(manp, encoding="utf-8")) if not d.get("keep")} if os.path.exists(manp) else set()
     have_keys |= dropped_keys
-    have_forms = {(it["head"], kata2hira(it["reading"])) for it in sel}
+    form = lambda it: (it["head"].replace("～", "〜"), kata2hira(it["reading"]).replace("〜", "").replace("～", ""))
+    have_forms = {form(it) for it in sel}
     exp = []
     for it in load_expansion():
-        fk = (it["head"], kata2hira(it["reading"]))
+        fk = form(it)
         if it["key"] in have_keys or fk in have_forms:
             continue
         have_keys.add(it["key"]); have_forms.add(fk)
@@ -199,6 +259,8 @@ def main():
     nxt = max([int(v) for v in ids.values()] + [0]) + 1
     for it in sel + exp:
         fk = f"{it['head']}|{kata2hira(it['reading'])}"
+        if fk not in ids and it.get("idkey") in ids:
+            ids[fk] = ids[it["idkey"]]
         if fk not in ids:
             ids[fk] = f"{nxt:04d}"
             nxt += 1
@@ -236,15 +298,24 @@ def main():
         for it in exp:
             if it["tier"] == tier:
                 eg.setdefault(it["theme"], []).append(it)
-        small = [th for th, g in eg.items() if len(g) < UNIT_MIN]
-        for th in small:
-            fam = [t for t in eg if t != th and FAMILY[t] == FAMILY[th] and len(eg[t]) >= UNIT_MIN]
+        # 小組（<EXP_SMALL 張）不自成一站（2、3 張的站太零碎：必備線原本有「急救 3 張」「醫院 2 張」這種站）。
+        # 併入的優先序：同主題的旅遊站（最後一站，併完 ≤24 張；課名要重看，見 group_prep）→ 同家族最大的擴充組 → 自成一小站
+        #（不併進同家族別的主題的旅遊站：必備線的「警官、交番」會被塞進「腰背與關節」）
+        for th in sorted([th for th, g in eg.items() if len(g) < EXP_SMALL], key=lambda t: len(eg[t])):
+            if th not in eg or len(eg[th]) >= EXP_SMALL:
+                continue
+            same = [u for u in T if u["th"] == th and len(u["cards"]) + len(eg[th]) <= 24]
+            if same:
+                same[-1]["cards"] += [x["id"] for x in eg.pop(th)]
+                same[-1]["grew"] = True
+                continue
+            fam = [t for t in eg if t != th and FAMILY[t] == FAMILY[th]]
             if fam:
                 host = max(fam, key=lambda t: len(eg[t]))
                 eg[host].extend(eg.pop(th))
         # 輪流的順序：組句的核心（動詞、形容詞、連接詞、副詞）在前，其餘依字數
         PRIO = ["VB", "AJ", "CJ", "AV", "NM", "GR", "KG", "LF"]
-        lanes = [split_units(g, tier, th, "x") for th, g in
+        lanes = [group_units(g, tier, th) for th, g in
                  sorted(eg.items(), key=lambda kv: (PRIO.index(kv[0]) if kv[0] in PRIO else len(PRIO), -len(kv[1])))]
         while any(lanes):
             for lane in lanes:
