@@ -16,7 +16,7 @@ TIERS = [{"id": 1, "name": "必備"}, {"id": 2, "name": "常用"}, {"id": 3, "na
 jp2t = opencc.OpenCC("jp2t")
 s2tw = opencc.OpenCC("s2tw")
 # 台灣常用、OpenCC 卻會轉成「臺／隻／註」的字，不算簡體
-TW_OK = set("台只注念游了伙雇划污")   # opencc 在台灣用法上的誤報：懷念→懷唸、游了泳→遊了泳、說明了→說明瞭、傢伙→傢夥、划算→劃算
+TW_OK = set("台只注念游了伙雇划污弦准卷拐布")   # opencc 在台灣用法上的誤報：懷念→懷唸、游了泳→遊了泳、說明了→說明瞭、傢伙→傢夥、划算→劃算
 
 
 def odd_chars(s):
@@ -127,6 +127,8 @@ def counter_problems(markup):
             cnt, num = b[-1], b[-2]
             rd = kata2hira(rt)
         if not cnt or not num:
+            continue
+        if b == "十分" and rd == "じゅうぶん" or cnt == "分" and rd.endswith("ぶ"):   # 十分（足夠）、3分咲き（ぶ）不是分鐘
             continue
         if num == "何":
             ok = any(rd.endswith(x) for x in _HOW[cnt])
@@ -288,13 +290,15 @@ def main():
     #（2026-09-25 使用者反映「寒暄與應答 1、2」在三條線重複出現）。select 重跑、課的組成變了要重新命名。
     np_ = os.path.join(BUILD, "unit_names.json")
     names = json.load(open(np_, encoding="utf-8")) if os.path.exists(np_) else {}
-    units = []
+    units, no_name = [], []
     for u in sel["units"]:
         ids = [x for x in u["cards"] if x not in dropped]
         if not ids:
             continue
         title = names.get(u["id"]) or u.get("name") or tname[u["th"]] + (f" {u['part']}" if u["parts"] > 1 else "")
         units.append({**{k: v for k, v in u.items() if k not in ("name", "grew")}, "cards": ids, "title": title})
+        if not (names.get(u["id"]) or u.get("name")):
+            no_name.append(u["id"])
     # 編號：照學習順序（必備→常用→進階，每條線由第一站起，站內照字表順序）從 0001 編起（2026-09-25 使用者要求）
     by_id = {c["id"]: c for c in cards}
     seq = 0
@@ -302,9 +306,8 @@ def main():
         for cid in u["cards"]:
             seq += 1
             by_id[cid]["sq"] = seq
-    missing = [u["id"] for u in units if u["id"] not in names and not u.get("name")]
-    if names and missing:
-        qa["unit_name_missing"] = missing
+    if names and no_name:
+        qa["unit_name_missing"] = no_name
     dup = [t for t, n in collections.Counter(u["title"] for u in units).items() if n > 1]
     if dup:
         qa["unit_title_duplicate"] = dup
