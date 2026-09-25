@@ -288,13 +288,14 @@ function cardHTML(card, opts = {}) {
       ${card.note ? `<div class="note">${esc(card.note)}</div>` : ''}
     </div>` : (card.note ? `<div class="panel"><div class="note" style="border:0;margin:0;padding:0">${esc(card.note)}</div></div>` : '');
   return `<article class="card stage${lastDir ? ' from-' + lastDir : ''}">
+    <span class="card-no" aria-label="編號 ${no4(card)}">${no4(card)}</span>
     <div class="word" lang="ja" style="--hw:${wordSize(w)}px">${rubyHTML(card.w)}</div>
     ${romaji}
     <p class="meaning${veil}" data-veil tabindex="0">${esc(card.zh)}</p>
     <span class="pos">${esc(card.pos || '')}</span>
     <div class="say-row">${sayBtn(card.id, 'w', card.k === 'p' ? '整句' : '單字')}</div>
     ${ex}
-    <div class="facts"><span class="sq">編號 ${no4(card)}</span>${stars(card.t)}<span>${TIER[card.t].name}</span>${card.rank ? `<span>旅遊頻率第 ${card.rank} 名</span>` : ''}${card.jl ? `<span>日檢 N${card.jl}</span>` : ''}${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
+    <div class="facts">${stars(card.t)}<span>${TIER[card.t].name}</span>${card.rank ? `<span>旅遊頻率第 ${card.rank} 名</span>` : ''}${card.jl ? `<span>日檢 N${card.jl}</span>` : ''}${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
   </article>`;
 }
 

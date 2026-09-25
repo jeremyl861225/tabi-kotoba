@@ -323,7 +323,13 @@ li.cur .stn-dot { width: 32px; height: 32px; border-width: 7px; }
 .word-row.seen .idx { color: var(--stroke); opacity: 1; }   /* 看過的字：號碼換成這一課的顏色（2026-09-25 改成淡灰小字，不再圈起來） */
 
 /* ---------- 學習字卡 ---------- */
-.card { text-align: center; }
+.card { text-align: center; position: relative; padding-top: 18px; }   /* 上方留一小行給編號，長句也不會疊到標音 */
+/* 單字編號：大字左上方的淡灰小字（2026-09-25 使用者指定位置，不加圓圈） */
+.card-no {
+  position: absolute; left: 2px; top: 0;
+  font-family: var(--ui); font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0.03em;
+  color: var(--ink-3); opacity: 0.7;
+}
 .stage.from-next { animation: slide-next 0.2s var(--ease); }
 .stage.from-prev { animation: slide-prev 0.2s var(--ease); }
 @keyframes slide-next { from { transform: translateX(26px); opacity: 0.2; } }
@@ -667,4 +673,3 @@ body.no-tabbar:not(:has(.sheet)) .toast { bottom: calc(96px + var(--safe-b)); }
 
 /* 單字編號（照學習順序） */
 .r-no { font-family: var(--ui); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; color: var(--ink-3); opacity: 0.7; margin-right: 8px; }
-.facts .sq { font-family: var(--ui); font-variant-numeric: tabular-nums; }
