@@ -665,3 +665,7 @@ body.no-tabbar:not(:has(.sheet)) .toast { bottom: calc(96px + var(--safe-b)); }
 @keyframes sun-rise { from { opacity: 0; transform: translateY(6%) scale(0.82); } to { opacity: 1; transform: none; } }
 @keyframes tabi-in { from { opacity: 0; transform: translateY(10%); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { #splash { display: none; } }
+
+/* 單字編號（照學習順序） */
+.r-no { font-family: var(--ui); font-size: 12px; font-weight: 500; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; color: var(--ink-3); margin-right: 8px; }
+.facts .sq { font-family: var(--ui); font-variant-numeric: tabular-nums; }

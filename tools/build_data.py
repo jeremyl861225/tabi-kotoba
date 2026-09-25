@@ -176,6 +176,13 @@ def main():
             continue
         title = names.get(u["id"]) or tname[u["th"]] + (f" {u['part']}" if u["parts"] > 1 else "")
         units.append({**u, "cards": ids, "title": title})
+    # 編號：照學習順序（必備→常用→進階，每條線由第一站起，站內照字表順序）從 0001 編起（2026-09-25 使用者要求）
+    by_id = {c["id"]: c for c in cards}
+    seq = 0
+    for u in sorted(units, key=lambda u: u["t"]):
+        for cid in u["cards"]:
+            seq += 1
+            by_id[cid]["sq"] = seq
     missing = [u["id"] for u in units if u["id"] not in names]
     if names and missing:
         qa["unit_name_missing"] = missing

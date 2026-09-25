@@ -64,6 +64,8 @@ function unitBadge(u, sm = false) {
   return `<span class="badge${sm ? ' sm' : ''}" style="${fieldVars(t)}" aria-hidden="true"><span class="code">${TIER[u.t].name[0]}</span><span class="no">${String(u.sn).padStart(2, '0')}</span></span>`;
 }
 const stationName = (u) => `${TIER[u.t].name}線第 ${u.sn} 站`;
+// 單字編號（照學習順序）：0001、0002…
+const no4 = (c) => String(c.sq || 0).padStart(4, '0');
 
 function starBtn(id) {
   const on = isStarred(id);
@@ -257,7 +259,7 @@ function viewUnit(uid) {
     const c = BYID[id];
     return `<a class="row word-row${store.seen[id] ? ' seen' : ''}" href="#/learn/${uid}/${i}" data-autoplay>
       <span class="idx" aria-hidden="true">${i + 1}</span>
-      <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh">${esc(c.zh)}</span></span>
+      <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh"><span class="r-no">${no4(c)}</span>${esc(c.zh)}</span></span>
       ${starBtn(id)}
     </a>`;
   }).join('');
@@ -290,7 +292,7 @@ function cardHTML(card, opts = {}) {
     <span class="pos">${esc(card.pos || '')}</span>
     <div class="say-row">${sayBtn(card.id, 'w', card.k === 'p' ? '整句' : '單字')}</div>
     ${ex}
-    <div class="facts">${stars(card.t)}<span>${TIER[card.t].name}</span><span>旅遊頻率第 ${card.rank} 名</span>${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
+    <div class="facts"><span class="sq">編號 ${no4(card)}</span>${stars(card.t)}<span>${TIER[card.t].name}</span><span>旅遊頻率第 ${card.rank} 名</span>${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
   </article>`;
 }
 
@@ -391,6 +393,7 @@ function filterCards() {
   if (browse.tier) list = list.filter((c) => c.t === browse.tier);
   if (browse.th) list = list.filter((c) => c.th === browse.th);
   if (browse.star) list = list.filter((c) => isStarred(c.id));
+  if (/^\d{1,4}$/.test(q)) return list.filter((c) => c.sq === Number(q)); // 輸入編號直接找那張卡
   if (q) {
     const nq = normQuery(q);
     if (isAscii(q)) {
@@ -410,7 +413,7 @@ function filterCards() {
 function rowHTML(c) {
   return `<a class="row" href="#/card/${c.id}" data-autoplay>
     ${UNIT[c.u] ? unitBadge(UNIT[c.u], true) : ''}
-    <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh">${esc(c.zh)}</span></span>
+    <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh"><span class="r-no">${no4(c)}</span>${esc(c.zh)}</span></span>
     ${starBtn(c.id)}
   </a>`;
 }
