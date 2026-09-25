@@ -128,7 +128,7 @@ def counter_problems(markup):
             rd = kata2hira(rt)
         if not cnt or not num:
             continue
-        if b == "十分" and rd == "じゅうぶん" or cnt == "分" and rd.endswith("ぶ"):   # 十分（足夠）、3分咲き（ぶ）不是分鐘
+        if cnt == "分" and (rd.endswith("ぶ") or rd.endswith("ぶん")):   # 十分（じゅうぶん，足夠）、3分咲き（ぶ）不是分鐘
             continue
         if num == "何":
             ok = any(rd.endswith(x) for x in _HOW[cnt])
