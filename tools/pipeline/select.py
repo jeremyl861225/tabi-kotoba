@@ -110,9 +110,14 @@ def load_expansion():
     ex = os.path.join(EXP, "extras.json")
     if os.path.exists(ex):   # 補充清單在前：連接詞、敬語、招牌菜單有專門整理的中文與說明，和日檢表重複時以它為準
         for r in json.load(open(ex, encoding="utf-8")):
-            items.append({"key": r["key"], "head": r["head"].replace("～", "〜"), "reading": r["reading"].replace("〜", "").replace("～", ""), "jl": int(r["level"]), "theme": r["theme"],
-                          "idkey": f"{r['head']}|{kata2hira(r['reading'])}",
-                          "kind": r.get("kind", "w"), "meanings": {"zh": [r["zh"]]} if r.get("zh") else {}, "src_note": r.get("note", ""), "fix": ""})
+            it = {"key": r["key"], "head": r["head"].replace("～", "〜"), "reading": r["reading"].replace("〜", "").replace("～", ""),
+                  "jl": int(r["level"]) if r.get("level") else None, "theme": r["theme"],
+                  "idkey": f"{r['head']}|{kata2hira(r['reading'])}",
+                  "kind": r.get("kind", "w"), "meanings": {"zh": [r["zh"]]} if r.get("zh") else {}, "src_note": r.get("note", ""), "fix": ""}
+            if r.get("tier"):          # 料理字庫：直接指定線與站（不是日檢字，卡片上不顯示級數）
+                it["tier"] = r["tier"]
+                it["station"] = r["station"]
+            items.append(it)
     for inp in sorted(glob.glob(os.path.join(EXP, "curate", "in-*.json"))):
         outp = inp.replace("in-", "out-").replace(".json", ".tsv")
         if not os.path.exists(outp):
@@ -239,7 +244,7 @@ def main():
             continue
         have_keys.add(it["key"]); have_forms.add(fk)
         it.update({"sources": [], "n": 0, "zipf": zipf_frequency(it["head"].strip("〜～"), "ja"), "rank": None,
-                   "tier": LEVEL_TIER.get(it["jl"], 3), "gloss": [], "keys": [it["key"]], "exp": True})
+                   "tier": it.get("tier") or LEVEL_TIER.get(it["jl"], 3), "gloss": [], "keys": [it["key"]], "exp": True})
         exp.append(it)
     # 旅遊字也標上日檢級數（有在日檢表裡的）
     jl_map = {}
@@ -297,9 +302,10 @@ def main():
             T += split_units(g, tier, th, "")
         # 擴充字：同級同主題一組，切成 ≤20 張的站；各主題輪流排，再平均穿插到旅遊站之間
         eg = collections.OrderedDict()
+        fg = collections.OrderedDict()   # 料理字庫（2026-09-29）另外排：不打亂原本各站的相對順序，最後再平均插進整條線
         for it in exp:
             if it["tier"] == tier:
-                eg.setdefault(it["theme"], []).append(it)
+                (fg if it.get("station") else eg).setdefault(it["theme"], []).append(it)
         # 小組（<EXP_SMALL 張）不自成一站（2、3 張的站太零碎：必備線原本有「急救 3 張」「醫院 2 張」這種站）。
         # 併入的優先序：同主題的旅遊站（最後一站，併完 ≤24 張；課名要重看，見 group_prep）→ 同家族最大的擴充組 → 自成一小站
         #（不併進同家族別的主題的旅遊站：必備線的「警官、交番」會被塞進「腰背與關節」）
@@ -326,9 +332,20 @@ def main():
         if E and T:
             # 平均穿插；旅遊站的位置用 i/T（第一站在 0）、擴充站用 (j+1)/(E+1)，每條線的第一站一定是旅遊站（必備線從打招呼開始）
             merged = sorted([(i / len(T), 0, i) for i in range(len(T))] + [((j + 1) / (len(E) + 1), 1, j) for j in range(len(E))])
-            units += [T[i] if kind == 0 else E[i] for _, kind, i in merged]
+            line = [T[i] if kind == 0 else E[i] for _, kind, i in merged]
         else:
-            units += T + E
+            line = T + E
+        # 料理站：各主題輪流（丼飯→居酒屋→蔬菜→壽司…），平均插進整條線（第一站不動）
+        flanes = [group_units(g, tier, th) for th, g in fg.items()]
+        F = []
+        while any(flanes):
+            for lane in flanes:
+                if lane:
+                    F.append(lane.pop(0))
+        if F and line:
+            merged = sorted([(i / len(line), 0, i) for i in range(len(line))] + [((j + 1) / (len(F) + 1), 1, j) for j in range(len(F))])
+            line = [line[i] if kind == 0 else F[i] for _, kind, i in merged]
+        units += line
     out = [{k: (sorted(v) if isinstance(v, set) else v) for k, v in it.items()} for it in sel + exp]
     json.dump({"cards": out, "units": units}, open(os.path.join(BUILD, "selection.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=1)
     tiers = collections.Counter(it["tier"] for it in sel + exp)

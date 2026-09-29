@@ -1,4 +1,4 @@
-"""三份補充清單 → build/expand/extras.json（給 select.py 的擴充模式）。
+"""補充清單 → build/expand/extras.json（給 select.py 的擴充模式）：三份日檢補充清單＋料理字庫 food.json。
 
 connectives.json → CJ 連接詞與句型；keigo.json → KG 敬語；signs_menus.json 依註記的地點關鍵字分主題（其餘 SN 招牌標示）。
 單字盡量對到 JMdict（key 為 w:<id>），句型與對不到的用 x:<寫法>（〜そうだ（様態）與（伝聞）這種同讀音的才不會被合併）。
@@ -35,6 +35,13 @@ def main():
             out.append({"key": key_for(r["head"], r["reading"], r.get("kind", "w")), "head": r["head"], "reading": r["reading"],
                         "level": r["level"], "theme": th, "kind": r.get("kind", "w"), "zh": r.get("zh", ""), "note": r.get("note", ""),
                         "src": fn.split(".")[0]})
+    # 料理字庫（2026-09-29，food_prep.py 產生）：每站指定主題與線，不是日檢字（level 空、tier 直接給）
+    fp = os.path.join(EXP, "food.json")
+    if os.path.exists(fp):
+        for r in json.load(open(fp, encoding="utf-8")):
+            out.append({"key": key_for(r["head"], r["reading"], r.get("kind", "w")), "head": r["head"], "reading": r["reading"],
+                        "level": None, "tier": r["tier"], "theme": r["theme"], "kind": r.get("kind", "w"), "zh": r.get("zh", ""),
+                        "note": r.get("note", ""), "station": r["station"], "src": "food"})
     json.dump(out, open(os.path.join(EXP, "extras.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=0)
     import collections
     print(len(out), "條", collections.Counter((o["src"], o["theme"]) for o in out).most_common())

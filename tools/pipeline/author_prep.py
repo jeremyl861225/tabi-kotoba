@@ -36,6 +36,8 @@ def main():
                 d["jl"] = c["jl"]
             if c.get("src_note"):
                 d["src_note"] = c["src_note"]
+            if c.get("station"):       # 料理字庫：站名（例：店員常說的話、居酒屋點餐說法），撰寫時判斷例句要寫誰說的話
+                d["station"] = c["station"]
             part.append(d)
         n = start + i // BATCH
         json.dump(part, open(os.path.join(outdir, f"in-{n:02d}.json"), "w", encoding="utf-8"), ensure_ascii=False, indent=0)

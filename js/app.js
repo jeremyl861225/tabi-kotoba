@@ -298,8 +298,8 @@ function cardHTML(card, opts = {}) {
   const romaji = store.settings.romaji && card.rm ? `<span class="roma" lang="ja-Latn">${esc(card.rm)}</span>` : '';
   const ex = card.ex ? `<div class="panel ex">
       <div class="ex-ja" lang="ja">${rubyHTML(card.ex)}</div>
-      <div class="ex-zh">${card.k === 'p' ? '<span class="ex-reply">可以這樣回答</span>' : ''}${esc(card.exz)}</div>
-      ${sayBtn(card.id, 'x', card.k === 'p' ? '回答' : '例句')}
+      <div class="ex-zh">${card.rp ? '<span class="ex-reply">可以這樣回答</span>' : ''}${esc(card.exz)}</div>
+      ${sayBtn(card.id, 'x', card.rp ? '回答' : '例句')}
       ${card.note ? `<div class="note">${esc(card.note)}</div>` : ''}
     </div>` : (card.note ? `<div class="panel"><div class="note" style="border:0;margin:0;padding:0">${esc(card.note)}</div></div>` : '');
   return `<article class="card stage${lastDir ? ' from-' + lastDir : ''}">

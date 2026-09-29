@@ -16,7 +16,7 @@ TIERS = [{"id": 1, "name": "必備"}, {"id": 2, "name": "常用"}, {"id": 3, "na
 jp2t = opencc.OpenCC("jp2t")
 s2tw = opencc.OpenCC("s2tw")
 # 台灣常用、OpenCC 卻會轉成「臺／隻／註」的字，不算簡體
-TW_OK = set("台只注念游了伙雇划污弦准卷拐布")   # opencc 在台灣用法上的誤報：懷念→懷唸、游了泳→遊了泳、說明了→說明瞭、傢伙→傢夥、划算→劃算
+TW_OK = set("台只注念游了伙雇划污弦准卷拐布郁干栖")   # opencc 在台灣用法上的誤報：濃郁、干貝、一夜干、羊栖菜、懷念→懷唸、游了泳→遊了泳、說明了→說明瞭、傢伙→傢夥、划算→劃算
 
 
 def odd_chars(s):
@@ -222,6 +222,15 @@ def main():
     # 清單由 build/ttscheck/check.py（假名版與漢字版比聲紋）＋alt.py（跟其他讀音比）找出，加卡後要重跑
     tkp = os.path.join(BUILD, "author", "tts_kana.json")
     tts_kana = json.load(open(tkp, encoding="utf-8")) if os.path.exists(tkp) else {}
+    # 例句裡也會念錯的冷門詞（銀杏→いちょう、七味→ななみ）：例句的朗讀文字把它們換成假名 [[寫法, 讀音], …]（2026-09-29 料理擴充）
+    tkx = os.path.join(BUILD, "author", "tts_kana_ex.json")
+    tts_kana_ex = sorted(json.load(open(tkx, encoding="utf-8")), key=lambda p: -len(p[0])) if os.path.exists(tkx) else []
+
+    def ex_tts(ex):
+        t = tts_text(ex)
+        for k, r in tts_kana_ex:
+            t = t.replace(k, r)
+        return t
     themes = theme_list()
     tname = {t["id"]: t["name"] for t in themes}
 
@@ -259,6 +268,9 @@ def main():
             "th": c["theme"], "t": c["tier"], "rank": c["rank"], "n": c["n"], "no": c["no"], "jl": c.get("jl"),
             "ex": ex, "exz": a.get("exz", "").strip(), "note": a.get("note", "").strip(), "k": kind,
         }
+        # 例句是「旅客的回應」的句子卡（店員、廣播說的話）才標「可以這樣回答」；旅客自己說的句子，例句只是用法
+        if kind == "p" and (c["theme"] == "LS" or c.get("station") == "店員常說的話"):
+            card["rp"] = 1
         verb_u = card["pos"].startswith("動詞")
         card["rm"] = romaji_for(head, read, kind, ("v5u",) if verb_u else ())
         if same_as_chinese(head, zh):
@@ -268,7 +280,7 @@ def main():
         if not card["jl"]:
             del card["jl"]
         cards.append(card)
-        tts[c["id"]] = {"w": word_tts(head, read, kind, w, c["id"] in tts_kana), "x": tts_text(ex) if ex else ""}
+        tts[c["id"]] = {"w": word_tts(head, read, kind, w, c["id"] in tts_kana), "x": ex_tts(ex) if ex else ""}
 
         # ---- 檢查 ----
         if not zh:

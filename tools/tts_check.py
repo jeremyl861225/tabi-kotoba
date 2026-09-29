@@ -28,7 +28,10 @@ def targets():
     tts = json.load(open(os.path.join(WORK, "build", "tts.json"), encoding="utf-8"))
     cards = {c["id"]: c for c in json.load(open(os.path.join(APP, "data", "cards.json"), encoding="utf-8"))["cards"]}
     out = {}
+    lo = os.environ.get("TK_MIN_ID", "")     # 只檢查新加的卡：TK_MIN_ID=4524
     for cid, v in tts.items():
+        if lo and cid < lo:
+            continue
         c = cards[cid]
         if c["k"] != "w" or not KANJI.search(v["w"]):
             continue
