@@ -91,6 +91,10 @@
 5. 使用者提到 react-three-fiber、liquid-glass-js、liquid-logo、kokonut ui：前兩個與 kokonut 都需要 React／建置步驟或 html2canvas，
    沒有放進 App；liquid-logo（Paper Shaders 液態金屬）可以不用 React。比較頁放在測試站
    `tabi-kotoba/2026-09-29-liquid/`（開場 A 平面／B 金屬圓／C 金屬「旅」字；分頁列球 A 光澤／B 液態金屬），**等使用者選**。
+7. **開場改成立體紅球**（v17，使用者指定）：`js/splash.js` 用 WebGL 片段著色器畫紅色球體，「旅」是球上的凹坑（字形高度圖＋法線擾動＋坑內陰影），
+   一開始字在背面、房間昏暗 → 球轉到正面 → 左上一束光打上來、坑壁明暗讓字浮出 → 房間亮成 App 底色、淡出（約 1.95 秒＋淡出 0.4 秒，點一下跳過）。
+   `index.html` 開頭先加 `gl-try` 讓第一格就是暗房；WebGL 失敗或減少動態效果時維持原本平面的日の丸開場。`window.__tkSplashT` 是截圖測試用的時間掛鉤。
+   液態金屬開場的比較頁因此作廢（測試站 meta 已標註）。
 6. 設定頁「關於」的字典說明改成中文釋義＋預錄發音（原本還寫英文釋義、手機語音）。
 
 ## 2026-09-25 晚：使用者回報四個問題（已修正上線 v14，commit 94d4252）
@@ -122,6 +126,7 @@
 | `tools/make_audio.py` | edge-tts 批次產生並修剪靜音（可中斷續跑） |
 | `tools/tts_check.py`、`tools/tts_alt.py` | 找語音念錯讀音的卡（假名版／其他讀音 vs 漢字版比聲紋）→ `build/author/tts_kana.json` |
 | `js/tabbar.js` | 分頁列：紅球與毛玻璃凹口的位置與動畫 |
+| `js/splash.js` | 立體開場（WebGL 著色器） |
 | `tools/build_dict.py` | 離線字典 `data/dict.json` |
 | `tools/themes.py` | 22 條主題的色票與推算色 |
 | `tools/make_icons.py` | App 圖示 |

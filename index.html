@@ -17,6 +17,8 @@
 <script>
   // 使用者在設定裡指定深淺色時，第一次畫面就套用（開場畫面才不會先閃另一種底色）
   try { var t = (JSON.parse(localStorage.getItem('tabi-kotoba/v1') || '{}').settings || {}).theme; if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  // 立體開場（js/splash.js）：能跑 WebGL 就先把開場畫成暗房，避免先閃一下平面的米色開場
+  if ('WebGLRenderingContext' in window && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) document.documentElement.classList.add('gl-try');
 </script>
 </head>
 <body>
@@ -60,6 +62,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
     </a>
   </div>
 </nav>
+<script type="module" src="js/splash.js"></script>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>

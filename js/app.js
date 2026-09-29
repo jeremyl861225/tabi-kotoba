@@ -1051,7 +1051,7 @@ const splash = document.getElementById('splash');
 const SPLASH_MIN = 900;
 function hideSplash(now = false) {
   if (!splash || splash.classList.contains('out')) return;
-  const wait = now ? 0 : Math.max(0, SPLASH_MIN - performance.now());
+  const wait = now ? 0 : Math.max(0, Math.max(SPLASH_MIN, window.__tkSplashEnd || 0) - performance.now());   // 立體開場跑完才淡出
   setTimeout(() => {
     splash.classList.add('out');
     setTimeout(() => splash.remove(), 400);
