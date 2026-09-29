@@ -4,6 +4,7 @@ import { play, playFile, stop, nextVoice, voiceName, audioUrl, cachedSet, downlo
 import { rubyHTML, plain, esc, toHira, normQuery, romaKey, isAscii } from './ruby.js';
 import { buildQuiz, TYPES, TYPE_HINT, TYPE_GROUPS } from './quiz.js';
 import { loadDict, searchDict, dictReady, dictEntry } from './dict.js';
+import { initTabbar, syncTabbar } from './tabbar.js';
 
 const $app = document.getElementById('app');
 const $meta = document.querySelector('meta[name="theme-color"]') || (() => {
@@ -132,6 +133,7 @@ function render(opts = {}) {
       document.body.classList.toggle('no-tabbar', NO_TABBAR.has(key));
       document.querySelectorAll('.tab').forEach((a) => a.setAttribute('aria-current', a.dataset.tab === TAB_OF[root] ? 'page' : 'false'));
       if (!NO_TABBAR.has(key)) setField(null);
+      syncTabbar();
       fn(...m.slice(1), opts);
       updateBadge();
       return;
@@ -186,6 +188,12 @@ function homePool() {
 
 function nextUnit(list = UNITS) {
   return list.find((u) => !unitRec(u.id).done) || list[list.length - 1];
+}
+
+function stationAfter(uid) {
+  const pool = homePool().some((u) => u.id === uid) ? homePool() : UNITS;
+  const i = pool.findIndex((u) => u.id === uid);
+  return i >= 0 ? pool[i + 1] || null : null;
 }
 
 function stationRow(u, nu) {
@@ -416,6 +424,8 @@ function filterCards() {
     list = list.slice().sort((a, b) => starts(a) - starts(b) || byRank(a, b));
   } else if (browse.sort === 'kana') {
     list = list.slice().sort((a, b) => a._hira.localeCompare(b._hira, 'ja'));
+  } else if (browse.sort === 'no') {
+    list = list.slice().sort((a, b) => (a.sq || 0) - (b.sq || 0));
   }
   return list;
 }
@@ -556,7 +566,7 @@ function renderResults() {
   if (!el) return;
   el.innerHTML = `
     <div class="meta-row"><span>${list.length} 張字卡</span>
-      ${browse.q ? '' : `<select id="sort" aria-label="排序"><option value="rank"${browse.sort === 'rank' ? ' selected' : ''}>依旅遊頻率</option><option value="kana"${browse.sort === 'kana' ? ' selected' : ''}>依五十音</option></select>`}
+      ${browse.q ? '' : `<select id="sort" aria-label="排序">${[['rank', '依旅遊頻率'], ['no', '依編碼'], ['kana', '依五十音']].map(([v, l]) => `<option value="${v}"${browse.sort === v ? ' selected' : ''}>${l}</option>`).join('')}</select>`}
     </div>
     ${list.length ? `<div class="list">${list.slice(0, browse.shown).map(rowHTML).join('')}</div>` : (browse.q.trim() ? '<p class="none">字卡裡沒有這個字，看看下面的字典。</p>' : `<div class="empty"><b>沒有符合的字卡</b>換個條件試試。</div>`)}
     ${list.length > browse.shown ? `<button class="pill ghost more" data-more>再顯示 ${Math.min(120, list.length - browse.shown)} 張</button>` : ''}
@@ -779,6 +789,7 @@ function viewTerminal() {
   }
   setField(THEME.GR || DATA.themes[0]);
   const wrong = quiz.list.filter((q) => !q.answer).map((q) => q.card);
+  const nx = quiz.unit ? stationAfter(quiz.unit) : null;
   ctxList = { ids: wrong.map((c) => c.id), label: '答錯的單字' };
   $app.innerHTML = `
     <div class="topbar"><button class="icon-btn" data-quiz-quit aria-label="離開">${I.close()}</button><span class="title">${esc(quiz.label)}</span></div>
@@ -787,12 +798,15 @@ function viewTerminal() {
       <div class="word" lang="ja"><ruby>終点<rt>しゅうてん</rt></ruby></div>
       <div class="score">${right}<small>/${total}</small></div>
       <p>${right === total ? '全部答對，這段路線很熟了。' : `答錯 ${wrong.length} 題，可以加星收進不熟單字。`}</p>
+      ${nx ? `<p>下一站：${stationName(nx)}「${esc(nx.title)}」。</p>` : ''}
     </section>
     ${wrong.length ? `<div class="meta-row"><span>答錯的單字</span><button class="pill ghost small" data-star-all>全部加星</button></div>
       <div class="list">${wrong.map(rowHTML).join('')}</div>` : ''}
     <div class="dock"><div class="dock-inner">
       ${wrong.length ? '<button class="pill ghost" data-quiz-retry>重考答錯的</button>' : ''}
-      <button class="pill" data-quiz-again>再考一次</button>
+      ${quiz.unit
+        ? (nx ? `<a class="pill" href="#/unit/${nx.id}" aria-label="下一站：${esc(nx.title)}">下一站</a>` : '<a class="pill" href="#/">回路線圖</a>')
+        : '<button class="pill" data-quiz-again>再考一次</button>'}
     </div></div>`;
 }
 
@@ -851,7 +865,7 @@ async function viewSettings() {
     <h2 class="group-title">關於</h2>
     <div class="group">
       <p class="fine">共 ${CARDS.length} 張字卡，分 ${UNITS.length} 課。「旅遊頻率」是把 ${DATA.meta.sources.length} 份中、日、英文旅遊日語教材的詞表合併，看每個詞被幾份收錄來排名；收錄數相同時，再依一般日語語料庫（wordfreq）的使用頻率排序。</p>
-      <p class="fine">發音：Microsoft 神經語音 Nanami（女聲）與 Keita（男聲），以 edge-tts 產生，僅供個人學習。讀音校對：JMdict／EDRDG（CC BY-SA 4.0）、JmdictFurigana。字卡以外的字：離線字典取自 JMdict 常用詞（CC BY-SA 4.0，英文釋義），發音用手機內建語音。日檢 N5–N3 的擴充單字與級數：open-anki-jlpt-decks（MIT，資料源自 tanos.co.uk 的日檢單字表）。例句與中文解釋由 AI 撰寫並經讀音比對檢查。</p>
+      <p class="fine">發音：Microsoft 神經語音 Nanami（女聲）與 Keita（男聲），以 edge-tts 產生，僅供個人學習。讀音校對：JMdict／EDRDG（CC BY-SA 4.0）、JmdictFurigana。字卡以外的字：離線字典取自 JMdict 常用詞（CC BY-SA 4.0），中文釋義由 AI 翻譯，發音為同樣以 edge-tts 產生的 Nanami 語音。日檢 N5–N3 的擴充單字與級數：open-anki-jlpt-decks（MIT，資料源自 tanos.co.uk 的日檢單字表）。例句與中文解釋由 AI 撰寫並經讀音比對檢查。</p>
       <details><summary>詞頻來源（${DATA.meta.sources.length} 份）</summary><ol class="src-list">${DATA.meta.sources.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ol></details>
       <p class="fine">資料版本 ${esc(DATA.meta.version)}</p>
     </div>`;
@@ -1064,6 +1078,7 @@ async function boot() {
     c._rk = romaKey(c.rm || '');
   }
   renderedHash = location.hash;
+  initTabbar();
   render();
   hideSplash();
 }

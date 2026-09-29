@@ -33,6 +33,7 @@ tools/pipeline/select.py      # 排名、分級、分課
 tools/pipeline/author_prep.py # 切撰寫批次
 tools/build_data.py           # 組 data/cards.json＋檢查
 tools/make_audio.py           # 產生發音
+tools/tts_check.py            # 找語音念錯讀音的單字（再用 tts_alt.py 確認）
 tools/build_dict.py           # 離線字典
 tools/e2e.py                  # 手機視窗端對端驗收
 ```

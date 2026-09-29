@@ -72,6 +72,27 @@
 - 字典釋義是 AI 翻譯（約九成好）：看到錯的直接寫進 `build/dictzh/fix.tsv`（依編號）再跑 `build_dict.py`
 - impeccable 收尾審查（finish reviewer＋DESIGN.md）、iPhone 實機離線測試（原本就列著的待辦）
 
+## 2026-09-29：使用者回報發音念錯＋介面四項（v16）
+
+1. **北念成ほく、南念成なん**（音讀／訓讀）→ 不只這兩張。Sudachi 讀音跟字卡一樣時 build_data 會送漢字給語音，
+   但 Edge 語音自己的判斷不同（單獨一個漢字常念成音讀）。`tools/tts_check.py` 對 3,289 張「送漢字」的單字卡各合成一份假名版比聲紋
+   （MFCC＋DTW；同讀音同聲調會產生一模一樣的檔＝距離 0），`tools/tts_alt.py` 再把單一漢字的卡跟其他讀音比；
+   找出 **102 張**念錯（魚→うお、卵→らん、町→ちょう、店→てん、下→げ、日→にち、君→くん、口→ぐち、辛い→からい、年月→ねんげつ…），
+   寫進 `build/author/tts_kana.json`，build_data 改送假名，重做 204 個音檔。**加卡後要重跑這兩支。**
+   - 陷阱：單獨一個假名（し、ひ、ち）女聲會念成氣音；市、氏、死、計、刑、語、碁、髪、神的漢字版本來就念對，保留漢字。
+   - 例句與句子卡（有上下文）沒有做這項檢查。
+   - `sw.js` 加 `AUDIO_REDO`：內容改過、網址沒變的音檔，新版啟用時從發音快取刪一次（v14 的 32 個與這次 102 個），否則手機會一直播舊檔。
+     音檔快取沒有時上網抓改用 `cache: 'no-cache'`。
+2. 單元測驗考完，底部主按鈕改成**下一站**（`stationAfter`：路線上緊接的那一站，首頁選了主題家族就在那一類裡往下）；非單元測驗仍是「再考一次」。
+3. 字卡頁排序加**依編碼**（`browse.sort === 'no'`）。
+4. **分頁列改成浮起來的紅球**（使用者給的參考圖）：`js/tabbar.js`。毛玻璃底板（`backdrop-filter`）用 `clip-path: path()` 裁出凹口，
+   細框與高光用同一條 SVG 路徑；選到的分頁圖示升進球裡、名稱留在原位變紅；換分頁時球滑過去（380ms、不回彈、略微拉長），凹口每一格跟著重算；
+   減少動態效果時直接跳到位。球是日の丸的紅（`--sun`），跟開場呼應。`--tb-space` 取代原本的 `--tabbar-h`。
+5. 使用者提到 react-three-fiber、liquid-glass-js、liquid-logo、kokonut ui：前兩個與 kokonut 都需要 React／建置步驟或 html2canvas，
+   沒有放進 App；liquid-logo（Paper Shaders 液態金屬）可以不用 React。比較頁放在測試站
+   `tabi-kotoba/2026-09-29-liquid/`（開場 A 平面／B 金屬圓／C 金屬「旅」字；分頁列球 A 光澤／B 液態金屬），**等使用者選**。
+6. 設定頁「關於」的字典說明改成中文釋義＋預錄發音（原本還寫英文釋義、手機語音）。
+
 ## 2026-09-25 晚：使用者回報四個問題（已修正上線 v14，commit 94d4252）
 
 1. 句型卡「〜はありますか」女聲把は念成 ha → `build_data.particle_start`：〜拿掉後第一個字是は／へ改念 わ／え；重做 50 個音檔
@@ -99,6 +120,8 @@
 | `tools/pipeline/rubytools.py` | 單字標音、例句讀音比對、朗讀文字、羅馬拼音 |
 | `tools/build_data.py` | 組 `data/cards.json`、`build/tts.json`、`build/qa.json` |
 | `tools/make_audio.py` | edge-tts 批次產生並修剪靜音（可中斷續跑） |
+| `tools/tts_check.py`、`tools/tts_alt.py` | 找語音念錯讀音的卡（假名版／其他讀音 vs 漢字版比聲紋）→ `build/author/tts_kana.json` |
+| `js/tabbar.js` | 分頁列：紅球與毛玻璃凹口的位置與動畫 |
 | `tools/build_dict.py` | 離線字典 `data/dict.json` |
 | `tools/themes.py` | 22 條主題的色票與推算色 |
 | `tools/make_icons.py` | App 圖示 |

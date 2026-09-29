@@ -77,11 +77,11 @@ def particle_start(t, head):
     return t
 
 
-def word_tts(head, read, kind, markup):
-    return particle_start(_word_tts(head, read, kind, markup), head)
+def word_tts(head, read, kind, markup, kana=False):
+    return particle_start(_word_tts(head, read, kind, markup, kana), head)
 
 
-def _word_tts(head, read, kind, markup):
+def _word_tts(head, read, kind, markup, kana=False):
     if kind == "p":   # 句子卡也可能是句型（いくら〜ても）：〜 同樣開頭不念、中間停頓
         return tts_text(re.sub(r"^[〜～]+|[〜～]+$", "", markup).replace("〜", "、").replace("～", "、"))
     # 括號：漢字註記不念（〜そうだ（伝聞））、假名照念（〜（ら）れる → られる）
@@ -89,6 +89,8 @@ def _word_tts(head, read, kind, markup):
     # 句型的「〜」：開頭的不念，中間的換成停頓（〜から〜まで → から、まで）
     head = re.sub(r"^[〜～]+|[〜～]+$", "", head).replace("〜", "、").replace("～", "、")
     read = read.replace("〜", "").replace("～", "")
+    if kana:          # tts_kana.json 裡的卡：語音會把漢字念成別的讀音（北→ほく），直接送假名
+        return read
     if not has_kanji(head):
         return head
     toks = list(sudachi_tokens(head))
@@ -215,6 +217,11 @@ def main():
     # 逐張確認過「例句有用到」的誤報（句型活用後字面對不上：〜なければならない → なければなりません）：[卡片編號]
     exp_ = os.path.join(BUILD, "author", "example_ok.json")
     example_ok = set(json.load(open(exp_, encoding="utf-8"))) if os.path.exists(exp_) else set()
+    # 語音念錯讀音的卡：{卡片編號: 寫法}，單字發音改送假名（2026-09-29 使用者：北念成ほく、南念成なん）。
+    # Sudachi 的讀音跟字卡一樣不代表 Edge 語音也這樣念（單獨一個漢字常念成音讀）；
+    # 清單由 build/ttscheck/check.py（假名版與漢字版比聲紋）＋alt.py（跟其他讀音比）找出，加卡後要重跑
+    tkp = os.path.join(BUILD, "author", "tts_kana.json")
+    tts_kana = json.load(open(tkp, encoding="utf-8")) if os.path.exists(tkp) else {}
     themes = theme_list()
     tname = {t["id"]: t["name"] for t in themes}
 
@@ -261,7 +268,7 @@ def main():
         if not card["jl"]:
             del card["jl"]
         cards.append(card)
-        tts[c["id"]] = {"w": word_tts(head, read, kind, w), "x": tts_text(ex) if ex else ""}
+        tts[c["id"]] = {"w": word_tts(head, read, kind, w, c["id"] in tts_kana), "x": tts_text(ex) if ex else ""}
 
         # ---- 檢查 ----
         if not zh:

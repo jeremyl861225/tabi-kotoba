@@ -1,6 +1,6 @@
 // 旅ことば service worker
 // 同一個 github.io origin 上還有別的 PWA：只刪自己的舊快取、只攔自己子路徑的請求。
-const CACHE_VERSION = 'tabi-kotoba-v15';
+const CACHE_VERSION = 'tabi-kotoba-v16';
 const AUDIO_CACHE = 'tabi-kotoba-audio'; // 不帶版本號：改版不清掉已下載的發音
 const CORE = [
   './',
@@ -12,6 +12,7 @@ const CORE = [
   'js/ruby.js',
   'js/quiz.js',
   'js/dict.js',
+  'js/tabbar.js',
   'data/dict.json',
   'data/cards.json',
   'manifest.webmanifest',
@@ -21,14 +22,45 @@ const CORE = [
 ];
 const SCOPE_PATH = new URL('./', self.location).pathname;
 
+// 內容改過、網址沒變的發音檔（音檔名＝卡片編號，x＝例句）。發音快取不隨版本清掉，
+// 所以每一批只在第一次啟用時從快取刪一次（快取裡放一個記號），下次播放就會重新下載新檔。
+const AUDIO_REDO = {
+  // 2026-09-25 v14：句型開頭的「は」念成 ha
+  v14: [
+    '0005', '0035', '0109', '0112', '0133', '0134', '0213', '0329', '0362', '0364', '0367', '0372', '0380x', '0381', '0382x', '0390',
+    '0433', '0452', '0469', '0493x', '0515', '0541', '0544', '0545', '0558', '0583', '0650', '0768', '0933', '0940', '0991', '1141',
+  ],
+  // 2026-09-29 v16：語音把單獨的漢字念成別的讀音（北→ほく、南→なん、町→ちょう…），改念假名
+  v16: [
+    '0044', '0045', '0051', '0054', '0059', '0101', '0155', '0171', '0173', '0317', '0345', '0358', '0360', '0375', '0387', '0391',
+    '0397', '0451', '0521', '0548', '0658', '0677', '0762', '0823', '0944', '0962', '0977', '1029', '1185', '1583', '1640', '1650',
+    '1672', '1674', '1685', '1694', '1698', '1767', '2076', '2077', '2079', '2087', '2096', '2098', '2101', '2107', '2112', '2132',
+    '2150', '2155', '2189', '2237', '2276', '2380', '2510', '2523', '2628', '2641', '2645', '2663', '2669', '2681', '2769', '2897',
+    '2902', '2947', '3044', '3070', '3121', '3166', '3207', '3208', '3373', '3392', '3461', '3489', '3507', '3510', '3518', '3559',
+    '3620', '3626', '3700', '3702', '3722', '3737', '3749', '3823', '3859', '3878', '3883', '3935', '3936', '3968', '3976', '3988',
+    '4052', '4099', '4147', '4167', '4191', '4226',
+  ],
+};
+
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_VERSION).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
 });
+
+async function dropRedoneAudio() {
+  const cache = await caches.open(AUDIO_CACHE);
+  for (const [batch, stems] of Object.entries(AUDIO_REDO)) {
+    const mark = new URL(`audio/.redo-${batch}`, self.location).href;
+    if (await cache.match(mark)) continue;
+    await Promise.all(stems.flatMap((s) => ['n', 'k'].map((v) => cache.delete(new URL(`audio/${v}/${s}.mp3`, self.location).href))));
+    await cache.put(mark, new Response('1'));
+  }
+}
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
       .then((keys) => Promise.all(keys.filter((k) => k.startsWith('tabi-kotoba-v') && k !== CACHE_VERSION).map((k) => caches.delete(k))))
+      .then(() => dropRedoneAudio().catch(() => {}))
       .then(() => self.clients.claim())
   );
 });
@@ -67,7 +99,7 @@ async function audioFetch(request) {
   const url = request.url.split('#')[0];
   let res = await cache.match(url);
   if (!res) {
-    const net = await fetch(url);
+    const net = await fetch(url, { cache: 'no-cache' });   // 跳過瀏覽器的 HTTP 快取，改過的音檔才不會抓到舊的
     if (!net.ok) return net;
     await cache.put(url, net.clone());
     res = net;

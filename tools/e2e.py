@@ -173,6 +173,32 @@ def main():
         check(len(kinds) >= min(4, len(u["cards"])), f"單元測驗題型太少：{kinds}")
         pg.wait_for_selector(".score")
         check("/" in pg.inner_text(".score"), "測驗沒有到終點")
+        # 單元測驗考完：主按鈕是「下一站」，點了到下一課（2026-09-29 使用者：不要「重考一次」）
+        nxt = data["units"][1]
+        check(pg.get_attribute(".dock-inner a.pill:not(.ghost)", "href") == f"#/unit/{nxt['id']}", "單元測驗結果頁沒有「下一站」")
+        check(not pg.query_selector("[data-quiz-again]"), "單元測驗結果頁還有「再考一次」")
+        pg.click(".dock-inner a.pill:not(.ghost)")
+        pg.wait_for_selector(".unit-head h1")
+        check(pg.inner_text(".unit-head h1") == nxt["title"], "點「下一站」沒有到下一課")
+
+        # 字卡排序「依編碼」（2026-09-29）
+        pg.goto(BASE + "#/browse")
+        pg.wait_for_selector("#sort")
+        pg.select_option("#sort", "no")
+        pg.wait_for_timeout(150)
+        nos = pg.eval_on_selector_all(".row .r-no", "els => els.slice(0, 5).map(e => e.textContent)")
+        check(nos == ["0001", "0002", "0003", "0004", "0005"], f"依編碼排序不對：{nos}")
+        pg.select_option("#sort", "rank")
+
+        # 分頁列：紅球停在目前分頁的正上方，底板凹口跟著它（2026-09-29 使用者：選到的按鈕漂浮成球、球會移過去）
+        for tab in ("quiz", "settings", "home"):
+            pg.click(f".tab[data-tab='{tab}']")
+            pg.wait_for_timeout(80)
+            dx = pg.evaluate(f"""(() => {{ const b = document.querySelector('.tb-ball').getBoundingClientRect();
+                const t = document.querySelector(".tab[data-tab='{tab}'] svg").getBoundingClientRect();
+                return Math.abs((b.left + b.width / 2) - (t.left + t.width / 2)) + Math.abs((b.top + b.height / 2) - (t.top + t.height / 2)); }})()""")
+            check(dx < 3, f"分頁列的球沒有停在「{tab}」上（差 {dx:.1f}px）")
+            check(pg.get_attribute(f".tab[data-tab='{tab}']", "aria-current") == "page", f"分頁「{tab}」沒有標成目前")
 
         # 星號與不熟清單
         pg.goto(BASE + f"#/card/{cards[1]['id']}")

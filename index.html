@@ -32,8 +32,13 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the fini
 <main id="app"></main>
 <nav class="tabbar" aria-label="主要分頁">
   <div class="tabbar-inner">
+    <!-- 底板：陰影、毛玻璃（clip-path 裁出凹口）、細框與高光；形狀由 js/tabbar.js 畫 -->
+    <svg class="tb-line tb-under" aria-hidden="true" preserveAspectRatio="none"><defs><filter id="tb-blur" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="7"/></filter></defs><path class="tb-shadow" filter="url(#tb-blur)"/></svg>
+    <div class="tb-glass" aria-hidden="true"></div>
+    <svg class="tb-line tb-over" aria-hidden="true" preserveAspectRatio="none"><defs><linearGradient id="tb-hi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><path class="tb-hair"/><path class="tb-hi" stroke="url(#tb-hi)"/></svg>
+    <span class="tb-ball" aria-hidden="true"></span>
     <a class="tab" data-tab="home" href="#/">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h16"/><circle cx="5" cy="12" r="2.2" fill="currentColor"/><circle cx="12" cy="12" r="2.2" fill="var(--surface)"/><circle cx="19" cy="12" r="2.2" fill="var(--surface)"/><path d="M4 6.5h9M4 17.5h13" opacity=".45"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12h16"/><circle cx="5" cy="12" r="2.2" fill="currentColor"/><circle cx="12" cy="12" r="2.2" fill="var(--tab-hole, var(--surface))"/><circle cx="19" cy="12" r="2.2" fill="var(--tab-hole, var(--surface))"/><path d="M4 6.5h9M4 17.5h13" opacity=".45"/></svg>
       路線
     </a>
     <a class="tab" data-tab="browse" href="#/browse">
