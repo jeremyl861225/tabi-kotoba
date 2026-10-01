@@ -5,6 +5,7 @@ import { rubyHTML, plain, esc, toHira, normQuery, romaKey, isAscii } from './rub
 import { buildQuiz, TYPES, TYPE_HINT, TYPE_GROUPS } from './quiz.js';
 import { loadDict, searchDict, dictReady, dictEntry } from './dict.js';
 import { initTabbar, syncTabbar } from './tabbar.js';
+import { setSkyMode } from './sky.js';
 
 const $app = document.getElementById('app');
 const $meta = document.querySelector('meta[name="theme-color"]') || (() => {
@@ -57,7 +58,7 @@ function setField(t) {
     b.style.setProperty('--bgL', t.bgL);
     b.style.setProperty('--bgD', t.bgD);
   }
-  $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--ground').trim() || '#f7f5f0';
+  $meta.content = getComputedStyle(document.documentElement).getPropertyValue('--sky-base').trim() || '#bcd3ee';
 }
 
 function unitBadge(u, sm = false) {
@@ -82,7 +83,7 @@ function sayBtn(id, part, label) {
 function wordSize(text, max = 66) {
   const n = [...text.replace(/​/g, '')].length;
   const table = n <= 2 ? max : n <= 3 ? max - 4 : n <= 4 ? max - 10 : n <= 5 ? max - 16 : max - 22;
-  const avail = Math.min(window.innerWidth, 560) - 44;
+  const avail = Math.min(window.innerWidth, 560) - 76;   // 字卡玻璃的內距
   return Math.max(24, Math.min(table, Math.floor(avail / (n * 1.04))));
 }
 
@@ -303,11 +304,13 @@ function cardHTML(card, opts = {}) {
       ${card.note ? `<div class="note">${esc(card.note)}</div>` : ''}
     </div>` : (card.note ? `<div class="panel"><div class="note" style="border:0;margin:0;padding:0">${esc(card.note)}</div></div>` : '');
   return `<article class="card stage${lastDir ? ' from-' + lastDir : ''}">
+    <div class="face">
     <span class="card-no" aria-label="編號 ${no4(card)}">${no4(card)}</span>
-    <div class="word" lang="ja" style="--hw:${wordSize(w)}px">${rubyHTML(card.w)}</div>
+    <div class="word" lang="ja" style="--hw:${wordSize(w, 104)}px">${rubyHTML(card.w)}</div>
     ${romaji}
     <p class="meaning${veil}" data-veil tabindex="0">${esc(card.zh)}</p>
     <span class="pos">${esc(card.pos || '')}</span>
+    </div>
     <div class="say-row">${sayBtn(card.id, 'w', card.k === 'p' ? '整句' : '單字')}</div>
     ${ex}
     <div class="facts">${stars(card.t)}<span>${TIER[card.t].name}</span>${card.rank ? `<span>旅遊頻率第 ${card.rank} 名</span>` : ''}${card.jl ? `<span>日檢 N${card.jl}</span>` : ''}${card.n ? `<span>${card.n} 份資料收錄</span>` : ''}<span>${UNIT[card.u] ? `${stationName(UNIT[card.u])}　${esc(UNIT[card.u].title)}` : ''}</span></div>
@@ -730,8 +733,7 @@ function viewQuizRun() {
       <span class="count">${quiz.i + 1}/${quiz.list.length}</span>
     </div>
     ${segsHTML(quiz.list.length, quiz.i, (k) => { const a = quiz.list[k]; return a.answer == null ? '' : a.answer ? 'ok' : 'ng'; })}
-    <div class="stage${lastDir ? ' from-' + lastDir : ''}">
-      <div class="q-kind">${LISTEN.has(q.type) ? '聽力' : q.type === 'spell' ? '拼音' : '看字'}・${TYPES[q.type]}</div>
+    <div class="stage${lastDir ? ' from-' + lastDir : ''}" data-qtype="${q.type}" aria-label="${LISTEN.has(q.type) ? '聽力' : q.type === 'spell' ? '拼音' : '看字'}：${TYPES[q.type]}">
       <div class="prompt">${prompt}</div>
       ${answerArea}
     </div>
@@ -865,7 +867,7 @@ async function viewSettings() {
     <h2 class="group-title">關於</h2>
     <div class="group">
       <p class="fine">共 ${CARDS.length} 張字卡，分 ${UNITS.length} 課。「旅遊頻率」是把 ${DATA.meta.sources.length} 份中、日、英文旅遊日語教材的詞表合併，看每個詞被幾份收錄來排名；收錄數相同時，再依一般日語語料庫（wordfreq）的使用頻率排序。</p>
-      <p class="fine">發音：Microsoft 神經語音 Nanami（女聲）與 Keita（男聲），以 edge-tts 產生，僅供個人學習。讀音校對：JMdict／EDRDG（CC BY-SA 4.0）、JmdictFurigana。字卡以外的字：離線字典取自 JMdict 常用詞（CC BY-SA 4.0），中文釋義由 AI 翻譯，發音為同樣以 edge-tts 產生的 Nanami 語音。日檢 N5–N3 的擴充單字與級數：open-anki-jlpt-decks（MIT，資料源自 tanos.co.uk 的日檢單字表）。例句與中文解釋由 AI 撰寫並經讀音比對檢查。</p>
+      <p class="fine">發音：Microsoft 神經語音 Nanami（女聲）與 Keita（男聲），以 edge-tts 產生，僅供個人學習。讀音校對：JMdict／EDRDG（CC BY-SA 4.0）、JmdictFurigana。字卡以外的字：離線字典取自 JMdict 常用詞（CC BY-SA 4.0），中文釋義由 AI 翻譯，發音為同樣以 edge-tts 產生的 Nanami 語音。字型：Zen Old Mincho（SIL Open Font License 1.1，只收 App 用到的字）。日檢 N5–N3 的擴充單字與級數：open-anki-jlpt-decks（MIT，資料源自 tanos.co.uk 的日檢單字表）。例句與中文解釋由 AI 撰寫並經讀音比對檢查。</p>
       <details><summary>詞頻來源（${DATA.meta.sources.length} 份）</summary><ol class="src-list">${DATA.meta.sources.map((s) => `<li><a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a></li>`).join('')}</ol></details>
       <p class="fine">資料版本 ${esc(DATA.meta.version)}</p>
     </div>`;
@@ -886,6 +888,7 @@ function applyTheme() {
   const t = store.settings.theme;
   if (t === 'auto') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', t);
+  setSkyMode(isDark());   // 天色跟著深淺色：白天／傍晚
   document.body.classList.toggle('furi-none', store.settings.furigana === 'none');
   document.body.classList.toggle('furi-word', store.settings.furigana === 'word');
   if (!document.body.classList.contains('lesson')) setField(null);
@@ -1008,27 +1011,45 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
-// 左右滑動換站
+// 左右滑動換站：玻璃字卡跟著手指走，放手時超過門檻就甩出去換卡，否則彈回（2026-10-01 暮色玻璃）
 let touch = null;
 document.addEventListener('touchstart', (e) => {
-  if (!e.target.closest('.card')) return;
+  const card = e.target.closest('.card');
+  if (!card) return;
   const t = e.touches[0];
-  touch = { x: t.clientX, y: t.clientY, at: Date.now() };
+  touch = { x: t.clientX, y: t.clientY, at: Date.now(), face: card.querySelector('.face'), lock: null };
+}, { passive: true });
+document.addEventListener('touchmove', (e) => {
+  if (!touch || !touch.face) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
+  if (touch.lock == null && Math.hypot(dx, dy) > 8) touch.lock = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+  if (touch.lock !== 'x') return;
+  touch.face.classList.remove('settle');
+  touch.face.classList.add('dragging');
+  touch.face.style.transform = `translateX(${dx}px) rotate(${dx / 30}deg)`;
 }, { passive: true });
 document.addEventListener('touchend', (e) => {
   if (!touch) return;
+  const { face, lock } = touch;
   const t = e.changedTouches[0];
   const dx = t.clientX - touch.x, dy = t.clientY - touch.y;
   const quick = Date.now() - touch.at < 600;
   touch = null;
-  if (!quick || Math.abs(dx) < 60 || Math.abs(dy) > Math.abs(dx) * 0.6) return;
   const nav = $app.dataset.nav ? JSON.parse($app.dataset.nav) : {};
   const dir = dx < 0 ? 'next' : 'prev';
-  if (nav[dir]) { lastDir = dir; go(nav[dir], { autoplay: true }); }
+  const swipe = (lock === 'x' && Math.abs(dx) > 90) || (quick && Math.abs(dx) >= 60 && Math.abs(dy) <= Math.abs(dx) * 0.6);
+  if (face) { face.classList.remove('dragging'); face.classList.add('settle'); }
+  if (swipe && nav[dir]) {
+    if (face && lock === 'x' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      face.style.transform = `translateX(${dx < 0 ? -110 : 110}vw) rotate(${dx < 0 ? -10 : 10}deg)`;
+      setTimeout(() => { lastDir = dir; go(nav[dir], { autoplay: true }); }, 170);
+    } else { lastDir = dir; go(nav[dir], { autoplay: true }); }
+  } else if (face) face.style.transform = '';
 }, { passive: true });
 
 document.addEventListener('audio-error', () => toast('這個音檔還沒下載，連上網路後再試一次'));
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => render());
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { setSkyMode(isDark()); render(); });
 
 async function runDownload(tier, btn) {
   const row = document.querySelector(`[data-dl-row="${tier}"]`);
@@ -1054,7 +1075,8 @@ function hideSplash(now = false) {
   const wait = now ? 0 : Math.max(0, Math.max(SPLASH_MIN, window.__tkSplashEnd || 0) - performance.now());   // 立體開場跑完才淡出
   setTimeout(() => {
     splash.classList.add('out');
-    setTimeout(() => splash.remove(), 400);
+    document.documentElement.classList.remove('splashing');   // App 本體淡入，天空不換
+    setTimeout(() => splash.remove(), 500);
   }, wait);
 }
 if (splash) splash.addEventListener('pointerdown', () => hideSplash(true), { once: true });

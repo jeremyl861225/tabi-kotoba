@@ -32,7 +32,7 @@ def main():
         sctx = b.new_context(viewport={"width": 375, "height": 740}, is_mobile=True, has_touch=True, service_workers="block")
         sp = sctx.new_page()
         sp.goto(BASE, wait_until="commit")
-        sp.wait_for_selector("#splash .sun", state="attached")
+        sp.wait_for_selector("#splash .splash-tile", state="attached")
         sp.wait_for_function("!document.getElementById('splash')", timeout=4000)
         sp.goto(BASE + "?reload=1#/browse", wait_until="commit")  # 只換 # 後面不會重新載入，開場不會再出現
         sp.wait_for_selector("#splash", state="attached")
@@ -161,7 +161,7 @@ def main():
         kinds = set()
         for i in range(len(u["cards"])):
             pg.wait_for_selector("[data-choice], [data-tile]")
-            kinds.add(pg.inner_text(".q-kind"))
+            kinds.add(pg.get_attribute(".stage[data-qtype]", "data-qtype"))   # 題型標籤（q-kind）2026-10-02 拿掉了，改讀屬性
             if pg.query_selector("[data-tile]"):
                 # 拼音題：依序點方塊直到填滿（不管對錯），確認會自動判分
                 while pg.query_selector(".bank [data-tile]:not([disabled])") and not pg.query_selector("[data-quiz-next]"):

@@ -7,7 +7,7 @@ const BALL = 48;     // 球的直徑
 const LIFT = -5;     // 球心在底板上緣之上幾 px（負的＝沉進底板；2026-09-29 使用者：球再陷深一點、縫再小）
 const GAP = 3;       // 球與凹口的間隙
 const FILLET = 9;    // 凹口與上緣接合處的圓角
-const CORNER = 22;   // 底板四角
+const CORNER = 32;   // 底板四角（暮色玻璃：接近膠囊）
 const DUR = 380;     // 球滑動的時間（ms）
 
 let inner, glass, paths, ball, W = 0, H = 0, corner = CORNER, x = null, raf = 0;

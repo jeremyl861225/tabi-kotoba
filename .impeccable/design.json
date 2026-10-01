@@ -1,0 +1,244 @@
+{
+ "schemaVersion": 2,
+ "generatedAt": "2026-10-02T00:12:44+08:00",
+ "title": "Design System: 旅ことば",
+ "extensions": {
+  "colorMeta": {
+   "ink": {
+    "role": "primary",
+    "displayName": "夜墨",
+    "canonical": "#18203a"
+   },
+   "dusk-ink": {
+    "role": "primary",
+    "displayName": "月白（深色模式）",
+    "canonical": "#fbf7ff"
+   },
+   "fam-basic": {
+    "role": "secondary",
+    "displayName": "石板灰藍"
+   },
+   "fam-move": {
+    "role": "secondary",
+    "displayName": "鐵道青"
+   },
+   "fam-stay": {
+    "role": "secondary",
+    "displayName": "紅豆"
+   },
+   "fam-food": {
+    "role": "secondary",
+    "displayName": "醬油"
+   },
+   "fam-shop": {
+    "role": "secondary",
+    "displayName": "藤紫"
+   },
+   "fam-care": {
+    "role": "secondary",
+    "displayName": "柿紅"
+   },
+   "fam-city": {
+    "role": "secondary",
+    "displayName": "松葉"
+   },
+   "fam-listen": {
+    "role": "secondary",
+    "displayName": "桔梗"
+   },
+   "badge": {
+    "role": "tertiary",
+    "displayName": "徽章金"
+   },
+   "glass": {
+    "role": "neutral",
+    "displayName": "玻璃面板"
+   },
+   "sky-base": {
+    "role": "neutral",
+    "displayName": "白天天色底"
+   },
+   "dusk-sky-base": {
+    "role": "neutral",
+    "displayName": "傍晚天色底"
+   }
+  },
+  "typographyMeta": {
+   "display": {
+    "displayName": "字卡大字",
+    "purpose": "單字卡的日文大字，依字數縮放、上限 104px。"
+   },
+   "headline": {
+    "displayName": "下一站站名",
+    "purpose": "首頁下一站面板的站名。"
+   },
+   "title": {
+    "displayName": "分級標題",
+    "purpose": "路線分級面板的標題。"
+   },
+   "body": {
+    "displayName": "中文內文",
+    "purpose": "宋體內文與說明。"
+   },
+   "label": {
+    "displayName": "標籤與數字",
+    "purpose": "編號、站數、羅馬拼音、分頁名稱。"
+   }
+  },
+  "shadows": [
+   {
+    "name": "glass-panel",
+    "value": "inset 0 1px 0 var(--edge), inset 0 0 0 1px var(--edge-2), 0 18px 34px -24px var(--shade)",
+    "purpose": "所有玻璃面板、卡面、提示。"
+   },
+   {
+    "name": "glass-inset",
+    "value": "inset 0 1px 0 var(--edge), inset 0 0 0 1px var(--edge-2)",
+    "purpose": "chip、家族格等面板裡的小元件。"
+   },
+   {
+    "name": "glass-bead",
+    "value": "inset 0 1px 1px rgb(255 255 255 / .8), inset 0 0 0 1px var(--edge-2), inset 0 -3px 6px rgb(255 255 255 / .18), 0 10px 18px -10px var(--shade)",
+    "purpose": "分頁列的玻璃球。"
+   }
+  ],
+  "motion": [
+   {
+    "name": "ease",
+    "value": "cubic-bezier(0.22, 0.8, 0.24, 1)",
+    "purpose": "按壓、展開、圖示升起。"
+   },
+   {
+    "name": "card-settle",
+    "value": "transform 0.42s cubic-bezier(0.2, 0.9, 0.25, 1.08)",
+    "purpose": "字卡拖曳不夠遠時彈回。"
+   },
+   {
+    "name": "ball-roll",
+    "value": "380ms",
+    "purpose": "分頁列的球滾到選中的分頁。"
+   },
+   {
+    "name": "next-spin",
+    "value": "spin 2.4s cubic-bezier(0.3, 0.7, 0.2, 1) 0.6s 1 both",
+    "purpose": "下一站面板的流光邊，只繞一圈。"
+   },
+   {
+    "name": "splash",
+    "value": "1700ms",
+    "purpose": "開場日出＋玻璃磚。"
+   }
+  ],
+  "breakpoints": [
+   {
+    "name": "content-max",
+    "value": "560px"
+   }
+  ]
+ },
+ "components": [
+  {
+   "name": "Primary Button",
+   "kind": "button",
+   "refersTo": "button-primary",
+   "description": "實心墨色膠囊：開始、發音、出發。",
+   "html": "<button class=\"ds-btn\">開始這一站</button>",
+   "css": ".ds-btn{appearance:none;border:0;display:inline-flex;align-items:center;min-height:52px;padding:0 22px;border-radius:999px;background:var(--cta,#18203a);color:var(--cta-ink,#fff);font-size:17px;font-weight:600;font-family: \"Zen Old Mincho\", \"Hiragino Mincho ProN\", \"Songti TC\", serif;transition:transform .12s cubic-bezier(.22,.8,.24,1)}.ds-btn:active{transform:scale(.97)}.ds-btn:focus-visible{outline:2px solid var(--focus,#18203a);outline-offset:3px}"
+  },
+  {
+   "name": "Ghost Button",
+   "kind": "button",
+   "refersTo": "button-ghost",
+   "description": "玻璃膠囊：次要動作。",
+   "html": "<button class=\"ds-ghost\">略過</button>",
+   "css": ".ds-ghost{appearance:none;border:0;min-height:52px;padding:0 22px;border-radius:999px;background:var(--glass,rgb(255 255 255/.42));color:var(--ink,#18203a);font-size:17px;font-weight:600;font-family: \"Zen Old Mincho\", \"Hiragino Mincho ProN\", \"Songti TC\", serif;box-shadow: inset 0 1px 0 var(--edge, rgb(255 255 255/.66)), inset 0 0 0 1px var(--edge-2, rgb(255 255 255/.36)), 0 18px 34px -24px var(--shade, rgb(16 20 50/.16)); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);}.ds-ghost:active{transform:scale(.97)}"
+  },
+  {
+   "name": "Chip",
+   "kind": "chip",
+   "refersTo": "chip",
+   "description": "篩選標籤；選中時變實心。",
+   "html": "<div style=\"display:flex;gap:8px\"><button class=\"ds-chip\"><i class=\"ds-dot\"></i>交通</button><button class=\"ds-chip\" aria-pressed=\"true\">全部</button></div>",
+   "css": ".ds-chip{appearance:none;border:0;display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 15px;border-radius:999px;background:var(--glass-2,rgb(255 255 255/.28));color:var(--ink,#18203a);box-shadow:inset 0 1px 0 var(--edge,rgb(255 255 255/.66)),inset 0 0 0 1px var(--edge-2,rgb(255 255 255/.36));font-size:14px;font-weight:500;font-family: \"Zen Old Mincho\", \"Hiragino Mincho ProN\", \"Songti TC\", serif;}.ds-chip[aria-pressed=true]{background:var(--cta,#18203a);color:var(--cta-ink,#fff);box-shadow:none}.ds-dot{width:11px;height:11px;border-radius:50%;background:#167793}"
+  },
+  {
+   "name": "Search Field",
+   "kind": "input",
+   "refersTo": "search-field",
+   "description": "浮在內容上的玻璃搜尋列。",
+   "html": "<label class=\"ds-search\"><input placeholder=\"搜尋單字、假名、中文\"></label>",
+   "css": ".ds-search{display:flex;align-items:center;height:48px;padding:0 18px;border-radius:999px;background:var(--glass-3,rgb(255 255 255/.7));box-shadow: inset 0 1px 0 var(--edge, rgb(255 255 255/.66)), inset 0 0 0 1px var(--edge-2, rgb(255 255 255/.36)), 0 18px 34px -24px var(--shade, rgb(16 20 50/.16)); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);}.ds-search:focus-within{box-shadow:inset 0 0 0 1.5px var(--focus,#18203a)}.ds-search input{flex:1;border:0;outline:0;background:transparent;font-size:17px;font-family: \"Zen Old Mincho\", \"Hiragino Mincho ProN\", \"Songti TC\", serif;}"
+  },
+  {
+   "name": "Glass Panel",
+   "kind": "card",
+   "refersTo": "panel",
+   "description": "下一站面板：玻璃底、40px 站名。",
+   "html": "<div class=\"ds-panel\"><small>下一站 · 第 7 站</small><h2 lang=\"ja\">東西南北</h2><p>問路與方向 · 9 個字</p></div>",
+   "css": ".ds-panel{padding:18px;border-radius:26px;background:var(--glass,rgb(255 255 255/.42));color:var(--ink,#18203a);box-shadow: inset 0 1px 0 var(--edge, rgb(255 255 255/.66)), inset 0 0 0 1px var(--edge-2, rgb(255 255 255/.36)), 0 18px 34px -24px var(--shade, rgb(16 20 50/.16)); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);font-family: \"Zen Old Mincho\", \"Hiragino Mincho ProN\", \"Songti TC\", serif;}.ds-panel h2{margin:0;font-size:40px;font-weight:900;line-height:1.2;letter-spacing:.02em}.ds-panel p,.ds-panel small{margin:2px 0 0;font-size:14px;color:var(--ink-2,#39436a)}"
+  },
+  {
+   "name": "Word Card",
+   "kind": "card",
+   "refersTo": "card-face",
+   "description": "字卡卡面：大字＋標音＋中文。",
+   "html": "<div class=\"ds-face\"><span class=\"ds-no\">0084</span><div class=\"ds-word\" lang=\"ja\"><ruby>南<rt>みなみ</rt></ruby></div><div class=\"ds-mean\">南；南邊</div></div>",
+   "css": ".ds-face{position:relative;padding:30px 16px 22px;border-radius:30px;text-align:center;background:var(--glass,rgb(255 255 255/.42));color:var(--ink,#18203a);box-shadow: inset 0 1px 0 var(--edge, rgb(255 255 255/.66)), inset 0 0 0 1px var(--edge-2, rgb(255 255 255/.36)), 0 18px 34px -24px var(--shade, rgb(16 20 50/.16)); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);font-family: \"Zen Old Mincho\", \"Hiragino Mincho ProN\", \"Songti TC\", serif;}.ds-no{position:absolute;left:18px;top:14px;font-size:13px;color:var(--ink-3,#59628a);opacity:.7}.ds-word{font-size:96px;font-weight:900;line-height:1.3}.ds-word rt{font-size:.34em;font-weight:400}.ds-mean{font-size:24px;font-weight:600}"
+  },
+  {
+   "name": "Tab Bar",
+   "kind": "nav",
+   "refersTo": "tabbar",
+   "description": "玻璃板＋沉在凹口裡的玻璃球（實際凹口由 SVG clip-path 畫，這裡是簡化版）。",
+   "html": "<nav class=\"ds-tb\"><span class=\"ds-ball\"></span><a>路線</a><a aria-current=\"page\">字卡</a><a>測驗</a><a>複習</a><a>我的</a></nav>",
+   "css": ".ds-tb{position:relative;display:grid;grid-template-columns:repeat(5,1fr);height:64px;padding:0 34px;border-radius:32px;background:var(--glass,rgb(255 255 255/.42));box-shadow: inset 0 1px 0 var(--edge, rgb(255 255 255/.66)), inset 0 0 0 1px var(--edge-2, rgb(255 255 255/.36)), 0 18px 34px -24px var(--shade, rgb(16 20 50/.16)); -webkit-backdrop-filter: blur(22px) saturate(1.6); backdrop-filter: blur(22px) saturate(1.6);}.ds-tb a{display:flex;align-items:flex-end;justify-content:center;padding-bottom:12px;font-size:11px;font-weight:700;color:var(--ink-3,#59628a);font-family: \"Zen Old Mincho\", \"Hiragino Mincho ProN\", \"Songti TC\", serif;}.ds-tb a[aria-current]{color:var(--ink,#18203a)}.ds-ball{position:absolute;top:-19px;left:calc(34px + (100% - 68px) * .3 - 24px);width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 31% 25%,rgb(255 255 255/.95) 0 5%,rgb(255 255 255/.5) 13%,rgb(255 255 255/0) 42%),var(--ball,rgb(255 255 255/.6));box-shadow:inset 0 1px 1px rgb(255 255 255/.8),inset 0 0 0 1px var(--edge-2,rgb(255 255 255/.36)),0 10px 18px -10px var(--shade,rgb(16 20 50/.16))}"
+  }
+ ],
+ "narrative": {
+  "northStar": "暮色玻璃（在日本看一整天的天色）",
+  "overview": "背景是一片會慢慢流動的天空：淺色模式是白天，深色模式是傍晚。所有內容都浮在液態玻璃上：半透明、背景模糊、上緣一道細高光。玻璃本身沒有顏色，顏色全部來自後面的天空。字是主角：全部用明朝與宋體，字卡大字最大 104px。動態只放在天空與分頁列的玻璃球，其他都是不擋操作的短回饋。",
+  "keyCharacteristics": [
+   "兩種表面：流動的天空（WebGL 網格漸層）＋液態玻璃面板",
+   "全明朝：Zen Old Mincho 500／900 子集＋系統宋體",
+   "墨色按鈕（淺色）／月白按鈕（深色）是唯一的實心色塊",
+   "路線家族的八個顏色只出現在小色點、路線線條與完成標記",
+   "分頁列是有凹口的玻璃板，玻璃球沉在凹口裡、滾到選中的分頁"
+  ],
+  "rules": [
+   {
+    "name": "The 天空上色 Rule",
+    "body": "介面元件不自己帶底色；要顏色就讓天空透過玻璃。唯一的實心色塊是 CTA（夜墨／月白）。",
+    "section": "colors"
+   },
+   {
+    "name": "The 家族色只當記號 Rule",
+    "body": "八個路線家族色只出現在 10–11px 色點、2px 線條與站點記號，不鋪大面積、不當文字色（深色模式的站名除外，且經過亮度補償）。",
+    "section": "colors"
+   },
+   {
+    "name": "The 不混字 Rule",
+    "body": "畫面上只有明朝與宋體兩種字；系統無襯線字（-apple-system、PingFang）不進 UI。字型檔只有兩個字重：400–600 都對到 500 檔，700–900 都對到 900 檔。",
+    "section": "typography"
+   },
+   {
+    "name": "The 一層玻璃 Rule",
+    "body": "玻璃不疊玻璃超過兩層（面板＋裡面的小元件）。第三層一律改成實心 CTA 或純文字。",
+    "section": "elevation"
+   }
+  ],
+  "dos": [
+   "Do 讓所有表面都是玻璃（glass／glass-2／glass-3＋背景模糊＋上緣高光），顏色交給天空。",
+   "Do 所有字都用 Zen Old Mincho 或宋體；數字等寬。",
+   "Do 實心色塊只給 CTA（夜墨／月白）。",
+   "Do 深色模式的家族色經過亮度補償（oklch l ≥ 0.74）。",
+   "Do 天空在捲動、拖曳、背景時暫停；減少動態效果時只畫一格。"
+  ],
+  "donts": [
+   "Don't 回到米色紙、平面卡片清單的舊樣式（2026-10-01 使用者選定暮色玻璃後淘汰）。",
+   "Don't 在 UI 用系統無襯線字。",
+   "Don't 用路線家族色鋪大面積或當正文色。",
+   "Don't 讓動畫一直重畫（流光邊只跑一圈；天空每秒最多 10 格）。",
+   "Don't 把分頁列換成一般的底部導覽；玻璃球滾動是使用者指定保留的。"
+  ]
+ }
+}

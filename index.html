@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>旅ことば｜日本旅遊單字卡</title>
 <meta name="description" content="日本旅遊常用日文單字卡：假名標音、發音、例句，依旅遊實用頻率分課與測驗。">
-<meta name="theme-color" content="#f7f5f0">
+<meta name="theme-color" content="#bcd3ee">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -13,24 +13,26 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="旅ことば">
+<link rel="preload" href="fonts/zenold-900.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/app.css">
 <script>
   // 使用者在設定裡指定深淺色時，第一次畫面就套用（開場畫面才不會先閃另一種底色）
   try { var t = (JSON.parse(localStorage.getItem('tabi-kotoba/v1') || '{}').settings || {}).theme; if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
-  // 立體開場（js/splash.js）：能跑 WebGL 就先把開場畫成暗房，避免先閃一下平面的米色開場
-  if ('WebGLRenderingContext' in window && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) document.documentElement.classList.add('gl-try');
+  // 開場（js/splash.js）：開場期間先藏住 App 本體，日出結束後才淡入；減少動態效果時沒有開場
+  if (!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) document.documentElement.classList.add('splashing');
 </script>
 </head>
 <body>
 <!--
-THESIS: 一本米色紙上的鐵道路線手帳：首頁是由必備往進階延伸的三條線，一站一課；色彩只出現在線、站點與按鈕上，字才是主角。
-OWN-WORLD: 米白底 #f7f5f0（2026-09-25 起；之前米色、純白都試過）與暖深咖啡深色模式（#1c1814）；八個主題家族各一個顏色（Colormind 色票主色），當點綴與下一站卡片的淡彩（約 12%），不鋪滿畫面；日文明朝、中文宋體（系統字，偏細）；膠囊鍵、18px 圓角選項磚、站點圓心落在不斷開的線上。
-STORY: 旅客一眼看到下一站是哪一課，一站一站學完、考一考、把不穩的字打星，到了日本離線查字播音。
-FIRST VIEWPORT: 開啟時先有約一秒的開場（日の丸的紅圓與米色「旅」，點一下跳過）；之後左上「旅ことば」與已學字數；下方是「下一站」卡片（路線章、課名、下一站是哪條線第幾站、每個字一格的進度、出發鍵）；其下是主題家族 3×3 色塊（篩選）與可收合的三條線。
-FORM: 使用者先指定參考 Drops，之後改為米色底、Colormind 色票當點綴、明朝／宋體、一站＝一課（2026-09-24）；seed 780ab2c2。
-FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
+THESIS: 在日本看一整天的天色：背景是會慢慢流動的天空（白天／傍晚），所有內容浮在液態玻璃上；路線圖、一站一課、字才是主角。拒絕：米色紙與平面卡片清單（2026-10-01 使用者選 D 主題＋B 字體）。
+OWN-WORLD: 自寫著色器的網格漸層天空（白天＝空色、桃、藤、象牙；傍晚＝茜、藤、紺）；液態玻璃面板（半透明白／紺、背景模糊、上緣高光、細白邊）；墨色膠囊主按鈕；Zen Old Mincho 900 的標題與單字、中文內文宋體；分頁列是玻璃底板＋凹口裡的玻璃珠。
+STORY: 打開時天亮了、玻璃上浮出「旅」；接著看到下一站的玻璃大格與三條線；字卡用手指拖著換；到了日本離線查字播音。
+FIRST VIEWPORT: 開場（夜色→白天、太陽升起、玻璃磚上的「旅」，約 1.7 秒、點一下跳過）；之後左上「旅ことば」與已學字數；下一站玻璃大格（路線章、課名、進度格、出發鍵、流光邊框）；主題家族 3×3 玻璃格；可收合的三條線玻璃面板。
+FORM: 使用者在四個試作中選 D 暮色玻璃＋B 東海道的字體，分頁列保留滾球；試作抽籤 be4917ea。
+FINISH: 2026-10-02 審查兩輪（第二輪 6 項解決、R1 已修）＋DESIGN.md 已寫；未解：清單的振假名基字偏移、實機效能待測
 -->
-<div id="splash" aria-hidden="true"><div class="sun"><span lang="ja">旅</span></div></div>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div id="splash" aria-hidden="true"><div class="splash-tile"><span lang="ja">旅</span></div><p class="splash-name" lang="ja">旅ことば</p></div>
 <main id="app"></main>
 <nav class="tabbar" aria-label="主要分頁">
   <div class="tabbar-inner">
