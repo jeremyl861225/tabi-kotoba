@@ -50,7 +50,8 @@
   --tb-space: calc(var(--tb-h) + var(--tb-mb) + 19px);   /* 19px＝球突出底板上緣的高度 */
   --sun: #bc002d;          /* 日章旗的紅：開場的圓與分頁列的球 */
   --sun-ink: #b0002a;      /* 選到的分頁名稱 */
-  --ball: #9c0026;         /* 分頁列的球：比日の丸紅深一階（2026-09-29 使用者：球的顏色更深） */
+  --ball: #3d3833;         /* 分頁列的球：深灰（2026-10-01 使用者：改成深灰色；之前是深紅） */
+  --ball-deep: #1f1c19;
   --glass: rgb(255 255 255 / 0.7);
   --glass-hair: rgba(60, 45, 25, 0.13);
   --glass-shadow: rgba(60, 45, 25, 0.16);
@@ -79,6 +80,8 @@
   --glass-hair: rgba(255, 240, 220, 0.12);
   --glass-shadow: rgba(0, 0, 0, 0.45);
   --sun-ink: #f06a7d;
+  --ball: #5d5650;
+  --ball-deep: #36312c;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -100,6 +103,8 @@
     --glass-hair: rgba(255, 240, 220, 0.12);
     --glass-shadow: rgba(0, 0, 0, 0.45);
     --sun-ink: #f06a7d;
+    --ball: #5d5650;
+    --ball-deep: #36312c;
   }
 }
 
@@ -690,8 +695,8 @@ body.no-tabbar .tabbar { display: none; }
   width: 48px; height: 48px; border-radius: 50%;
   background:
     radial-gradient(90% 90% at 32% 24%, rgb(255 255 255 / 0.24), rgb(255 255 255 / 0) 55%),
-    radial-gradient(circle at 50% 110%, #5e0017, var(--ball) 62%);
-  box-shadow: 0 8px 14px -8px rgb(90 0 20 / 0.6), inset 0 -2px 5px rgb(50 0 12 / 0.3), inset 0 1px 1px rgb(255 255 255 / 0.28);
+    radial-gradient(circle at 50% 110%, var(--ball-deep), var(--ball) 62%);
+  box-shadow: 0 8px 14px -8px rgb(30 25 20 / 0.5), inset 0 -2px 5px rgb(0 0 0 / 0.25), inset 0 1px 1px rgb(255 255 255 / 0.22);
   will-change: transform;
 }
 .tab {
@@ -703,7 +708,7 @@ body.no-tabbar .tabbar { display: none; }
   -webkit-touch-callout: none;
 }
 .tab svg { width: 26px; height: 26px; transition: transform 0.26s var(--ease), color 0.16s; }
-.tab[aria-current="page"] { color: var(--sun-ink); font-weight: 600; --tab-hole: var(--ball); }
+.tab[aria-current="page"] { color: var(--ink); font-weight: 600; --tab-hole: var(--ball); }   /* 名稱跟著球改成墨色 */
 .tab[aria-current="page"] svg {
   transform: translateY(-19px);                       /* 圖示中心 24 → 球心 5 */
   color: #fff;
