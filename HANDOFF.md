@@ -72,6 +72,14 @@
 - 字典釋義是 AI 翻譯（約九成好）：看到錯的直接寫進 `build/dictzh/fix.tsv`（依編號）再跑 `build_dict.py`
 - impeccable 收尾審查（finish reviewer＋DESIGN.md）、iPhone 實機離線測試（原本就列著的待辦）
 
+## 2026-10-01：分頁列球改深灰（v20）＋整體設計試作（等使用者選）
+
+- 分頁列的球：紅 → 深紅（v19，再沉進凹口：球心在上緣之下 5px、間隙 3px）→ **深灰**（v20，`--ball`／`--ball-deep`，深色模式用稍亮的灰）；選到的分頁名稱改墨色。
+- 使用者問能不能整體換設計、點名 motion／shadergradient／kokonut ui／liquid-glass：用 impeccable 跑方向抽籤（seed be4917ea），做了四個方向的主畫面＋字卡（淺深色），
+  放在測試站 <https://jeremyl861225.github.io/tabi-kotoba-test/tabi-kotoba/2026-10-01-redesign/>：
+  A 站名牌（抽籤主打）、B 東海道五十三次（impeccable 首選）、C 乘車券（挑戰者融合）、D 暮色玻璃（Paper Shaders 網格漸層＋液態玻璃＋kokonut 便當格＋Motion）。
+  **選定後**：整個 App 照該方向改（路線、字卡、測驗、不熟、設定、字典、開場），網頁字型要自己打包裁切才能離線，之後跑 impeccable 的收尾審查與 DESIGN.md。
+
 ## 2026-09-29：料理字庫擴充（v18 上線）
 
 使用者要求：居酒屋用語、常見料理、酒品、懷石食材、生魚片壽司的魚貝類、蔬菜等，**約 600 字、混進現有三條線**（依常見程度分必備／常用／進階）。
