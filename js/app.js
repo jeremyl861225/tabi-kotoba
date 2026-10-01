@@ -65,7 +65,7 @@ function unitBadge(u, sm = false) {
   const t = THEME[u.th];
   return `<span class="badge${sm ? ' sm' : ''}" style="${strokeVars(t)}" aria-hidden="true"><span class="code">${TIER[u.t].name[0]}</span><span class="no">${String(u.sn).padStart(2, '0')}</span></span>`;
 }
-// 一行字盡量不換行（2026-10-02 使用者要求）：data-fit＝最小字級；放不下就等比縮小，縮到最小還放不下才換行。
+// 一行字盡量不換行（2026-10-02 使用者要求）：data-fit＝最小字級；放不下就等比縮小；縮到最小也放不下，就維持原字級平均換行。
 // 先全部還原、再一次量、最後一次寫，只排版一次；畫面內容一換（MutationObserver）、字型載完、轉向、展開路線時重算。
 function fitText() {
   const els = [...$app.querySelectorAll('[data-fit]')];
@@ -78,7 +78,7 @@ function fitText() {
     const min = +el.dataset.fit || 12;
     const f = Math.floor((fs * w) / sw * 4) / 4;
     if (f >= min) el.style.fontSize = f + 'px';
-    else { el.style.fontSize = min + 'px'; el.classList.add('fit-wrap'); }
+    else el.classList.add('fit-wrap');   // 縮到最小也放不下：維持原字級、平均換成兩行
   });
 }
 let fitQueued = false;
@@ -276,7 +276,7 @@ function viewHome() {
       <div class="next-head">${unitBadge(nu)}<h2 data-fit="22">${esc(nu.title)}</h2></div>
       <p class="next-sub" data-fit="12">下一站：${stationName(nu)}${nu.title === THEME[nu.th].name ? '' : `，${esc(THEME[nu.th].name)}`}</p>
       ${segsHTML(nu.cards.length, pos, (i) => (store.seen[nu.cards[i]] ? 'done' : ''))}
-      <div class="next-foot"><span class="n">${nuSeen ? `已學 ${nuSeen}／${nu.cards.length} 字，從 <span lang="ja">${esc(plain(firstCard.w))}</span> 繼續` : `${nu.cards.length} 個單字，第一個是 <span lang="ja">${esc(plain(firstCard.w))}</span>`}</span><span class="next-go">${pos ? '繼續' : '出發'}${I.go()}</span></div>
+      <div class="next-foot"><span class="n" data-fit="12">${nuSeen ? `已學 ${nuSeen}／${nu.cards.length} 字，從 <span lang="ja">${esc(plain(firstCard.w))}</span> 繼續` : `${nu.cards.length} 個單字，第一個是 <span lang="ja">${esc(plain(firstCard.w))}</span>`}</span><span class="next-go">${pos ? '繼續' : '出發'}${I.go()}</span></div>
     </a>
     <div class="fams" role="group" aria-label="依主題分類">${fams}</div>
     ${tiers}`;

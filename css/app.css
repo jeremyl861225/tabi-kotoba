@@ -249,7 +249,7 @@ body.no-tabbar .dock { bottom: 0; padding-bottom: calc(12px + var(--safe-b)); }
 .next .segs { margin: 18px 2px 14px; }
 .next-foot .n [lang="ja"] { color: var(--ink); }
 .next-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.next-foot .n { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.next-foot .n { flex: 1; min-width: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
 .next-go {
   flex: none; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 8px;
