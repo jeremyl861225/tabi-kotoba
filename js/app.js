@@ -63,8 +63,30 @@ function setField(t) {
 
 function unitBadge(u, sm = false) {
   const t = THEME[u.th];
-  return `<span class="badge${sm ? ' sm' : ''}" style="${fieldVars(t)}" aria-hidden="true"><span class="code">${TIER[u.t].name[0]}</span><span class="no">${String(u.sn).padStart(2, '0')}</span></span>`;
+  return `<span class="badge${sm ? ' sm' : ''}" style="${strokeVars(t)}" aria-hidden="true"><span class="code">${TIER[u.t].name[0]}</span><span class="no">${String(u.sn).padStart(2, '0')}</span></span>`;
 }
+// 一行字盡量不換行（2026-10-02 使用者要求）：data-fit＝最小字級；放不下就等比縮小，縮到最小還放不下才換行。
+// 先全部還原、再一次量、最後一次寫，只排版一次；畫面內容一換（MutationObserver）、字型載完、轉向、展開路線時重算。
+function fitText() {
+  const els = [...$app.querySelectorAll('[data-fit]')];
+  if (!els.length) return;
+  els.forEach((el) => { el.style.fontSize = ''; el.classList.remove('fit-wrap'); });
+  const m = els.map((el) => [el.clientWidth, el.scrollWidth, parseFloat(getComputedStyle(el).fontSize)]);
+  els.forEach((el, i) => {
+    const [w, sw, fs] = m[i];
+    if (!w || sw <= w + 0.5) return;
+    const min = +el.dataset.fit || 12;
+    const f = Math.floor((fs * w) / sw * 4) / 4;
+    if (f >= min) el.style.fontSize = f + 'px';
+    else { el.style.fontSize = min + 'px'; el.classList.add('fit-wrap'); }
+  });
+}
+let fitQueued = false;
+const queueFit = () => { if (!fitQueued) { fitQueued = true; requestAnimationFrame(() => { fitQueued = false; fitText(); }); } };
+new MutationObserver(fitText).observe($app, { childList: true, subtree: true });
+addEventListener('resize', queueFit);
+document.addEventListener('toggle', queueFit, true);
+if (document.fonts) { document.fonts.ready.then(queueFit); document.fonts.addEventListener('loadingdone', queueFit); }
 const stationName = (u) => `${TIER[u.t].name}線第 ${u.sn} 站`;
 // 單字編號（照學習順序）：0001、0002…
 const no4 = (c) => String(c.sq || 0).padStart(4, '0');
@@ -205,7 +227,7 @@ function stationRow(u, nu) {
   return `<li class="${state}" style="${strokeVars(THEME[u.th])}"><a class="stn" href="#/unit/${u.id}" aria-label="${stationName(u)}：${esc(u.title)}${u.title === th ? '' : `（${esc(th)}）`}，已學 ${seen}／${u.cards.length}${r.done ? '，已到着' : ''}">
     <span class="stn-dot" aria-hidden="true">${r.done ? I.check('') : ''}</span>
     <span class="stn-main">
-      <span class="stn-name">${esc(u.title)}</span>
+      <span class="stn-name" data-fit="14">${esc(u.title)}</span>
       <span class="stn-sub"><span class="stn-no">${TIER[u.t].name[0]}${String(u.sn).padStart(2, '0')}</span>${u.title === th ? '' : `<span>${esc(th)}</span>`}<span>${u.cards.length} 字${seen && !r.done ? `，已學 ${seen}` : ''}</span></span>
       ${seen && !r.done ? `<span class="stn-bar"><i style="--p:${(seen / u.cards.length).toFixed(3)}"></i></span>` : ''}
     </span>
@@ -229,7 +251,7 @@ function viewHome() {
   const fams = [{ id: '', name: '全部', rep: null }, ...(DATA.families || [])].map((f) => {
     const us = f.id ? UNITS.filter((u) => famOf(u) === f.id) : UNITS;
     const d = us.filter((u) => unitRec(u.id).done).length;
-    return `<button class="fam" data-fam="${f.id}" aria-pressed="${fam === f.id}"${f.rep ? ` style="${strokeVars(THEME[f.rep])}"` : ''}><b>${f.name}</b><span>${d}／${us.length} 站</span></button>`;
+    return `<button class="fam" data-fam="${f.id}" aria-pressed="${fam === f.id}"${f.rep ? ` style="${strokeVars(THEME[f.rep])}"` : ''}><b data-fit="12">${f.name}</b><span>${d}／${us.length} 站</span></button>`;
   }).join('');
 
   // 三條線可收合；沒動過的話只展開下一站所在的那條
@@ -248,10 +270,11 @@ function viewHome() {
   $app.innerHTML = `
     <header class="home-top">
       <h1 class="brand" lang="ja"><ruby>旅<rt>たび</rt></ruby>ことば</h1>
-      <p class="home-status">已學 <b>${seenCount}</b>／${CARDS.length} 字，到着 <b>${doneUnits}</b>／${UNITS.length} 站${starCount ? `，<a href="#/starred">不熟 <b>${starCount}</b> 字</a>` : ''}</p>
+      <p class="home-status" data-fit="12">已學 <b>${seenCount}</b>／${CARDS.length} 字，到着 <b>${doneUnits}</b>／${UNITS.length} 站${starCount ? `，<a href="#/starred">不熟 <b>${starCount}</b> 字</a>` : ''}</p>
     </header>
     <a class="next" href="#/learn/${nu.id}/${pos}" data-autoplay style="${fieldVars(THEME[nu.th])}">
-      <div class="next-head">${unitBadge(nu)}<div><h2>${esc(nu.title)}</h2><p>下一站：${stationName(nu)}${nu.title === THEME[nu.th].name ? '' : `，${esc(THEME[nu.th].name)}`}</p></div></div>
+      <div class="next-head">${unitBadge(nu)}<h2 data-fit="22">${esc(nu.title)}</h2></div>
+      <p class="next-sub" data-fit="12">下一站：${stationName(nu)}${nu.title === THEME[nu.th].name ? '' : `，${esc(THEME[nu.th].name)}`}</p>
       ${segsHTML(nu.cards.length, pos, (i) => (store.seen[nu.cards[i]] ? 'done' : ''))}
       <div class="next-foot"><span class="n">${nuSeen ? `已學 ${nuSeen}／${nu.cards.length} 字，從 <span lang="ja">${esc(plain(firstCard.w))}</span> 繼續` : `${nu.cards.length} 個單字，第一個是 <span lang="ja">${esc(plain(firstCard.w))}</span>`}</span><span class="next-go">${pos ? '繼續' : '出發'}${I.go()}</span></div>
     </a>
@@ -275,13 +298,13 @@ function viewUnit(uid) {
     return `<a class="row word-row${on ? ' seen' : ''}${i === cur ? ' cur' : ''}" href="#/learn/${uid}/${i}" data-autoplay${i === cur ? ' aria-current="step"' : ''}>
       <span class="mk" aria-hidden="true">${on && i !== cur ? I.check('') : ''}</span>
       <span class="idx">${no4(c)}${i === cur ? '<b class="cur-tag">目前</b>' : ''}${on ? '<span class="sr-only">已學</span>' : ''}</span>
-      <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh">${esc(c.zh)}</span></span>
+      <span class="r-main"><span class="r-w" lang="ja" data-fit="15">${rubyHTML(c.w)}</span><span class="r-zh" data-fit="12">${esc(c.zh)}</span></span>
       ${starBtn(id)}
     </a>`;
   }).join('');
   $app.innerHTML = `
     <div class="topbar"><a class="icon-btn" href="#/" aria-label="回路線圖">${I.back()}</a><span class="title">${TIER[u.t].name}線</span></div>
-    <div class="unit-head">${unitBadge(u)}<div><h1>${esc(u.title)}</h1><p>${u.title === t.name ? '' : `${esc(t.name)}，`}${stationName(u)}，${u.cards.length} 個單字${seen ? `，已學 ${seen}` : ''}${rec.best != null ? `，測驗最佳 ${rec.best}/${rec.total}` : ''}</p></div></div>
+    <div class="unit-head">${unitBadge(u)}<div><h1 data-fit="20">${esc(u.title)}</h1><p data-fit="12">${u.title === t.name ? '' : `${esc(t.name)}，`}${stationName(u)}，${u.cards.length} 個單字${seen ? `，已學 ${seen}` : ''}${rec.best != null ? `，測驗最佳 ${rec.best}/${rec.total}` : ''}</p></div></div>
     ${segsHTML(u.cards.length, -1, (i) => (store.seen[u.cards[i]] ? 'done' : ''))}
     <div class="list">${list}</div>
     <div class="dock"><div class="dock-inner">
@@ -436,7 +459,7 @@ function filterCards() {
 function rowHTML(c) {
   return `<a class="row" href="#/card/${c.id}" data-autoplay>
     ${UNIT[c.u] ? unitBadge(UNIT[c.u], true) : ''}
-    <span class="r-main"><span class="r-w" lang="ja">${rubyHTML(c.w)}</span><span class="r-zh"><span class="r-no">${no4(c)}</span>${esc(c.zh)}</span></span>
+    <span class="r-main"><span class="r-w" lang="ja" data-fit="15">${rubyHTML(c.w)}</span><span class="r-zh" data-fit="12"><span class="r-no">${no4(c)}</span>${esc(c.zh)}</span></span>
     ${starBtn(c.id)}
   </a>`;
 }
@@ -444,7 +467,7 @@ function rowHTML(c) {
 function viewBrowse() {
   const tierChips = [0, 1, 2, 3].map((t) => `<button class="chip" data-f-tier="${t}" aria-pressed="${browse.tier === t}">${t ? TIER[t].name : '全部等級'}</button>`).join('');
   const themeChips = [`<button class="chip" data-f-th="" aria-pressed="${!browse.th}">全部主題</button>`]
-    .concat(DATA.themes.map((t) => `<button class="chip" data-f-th="${t.id}" aria-pressed="${browse.th === t.id}" style="${fieldVars(t)}"><span class="dot"></span>${esc(t.name)}</button>`)).join('');
+    .concat(DATA.themes.map((t) => `<button class="chip" data-f-th="${t.id}" aria-pressed="${browse.th === t.id}" style="${strokeVars(t)}"><span class="dot"></span>${esc(t.name)}</button>`)).join('');
   $app.innerHTML = `
     <div class="search">
       <label class="search-box">${I.search()}<input id="q" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="查單字：漢字、假名、拼音、中文、英文" value="${esc(browse.q)}" aria-label="搜尋單字"></label>
@@ -611,7 +634,7 @@ function viewQuizSetup() {
   const scopes = [['tier', '依等級'], ['theme', '依主題'], ['unit', '依單元'], ['star', '不熟單字'], ['wrong', '曾答錯'], ['all', '全部']];
   let sub = '';
   if (quizSetup.scope === 'tier') sub = `<div class="wrap">${DATA.tiers.map((t) => `<button class="chip" data-qs-tier="${t.id}" aria-pressed="${quizSetup.tier === t.id}">${t.name}</button>`).join('')}</div>`;
-  if (quizSetup.scope === 'theme') sub = `<div class="wrap">${DATA.themes.map((t) => `<button class="chip" data-qs-th="${t.id}" aria-pressed="${(quizSetup.th || DATA.themes[0].id) === t.id}" style="${fieldVars(t)}"><span class="dot"></span>${esc(t.name)}</button>`).join('')}</div>`;
+  if (quizSetup.scope === 'theme') sub = `<div class="wrap">${DATA.themes.map((t) => `<button class="chip" data-qs-th="${t.id}" aria-pressed="${(quizSetup.th || DATA.themes[0].id) === t.id}" style="${strokeVars(t)}"><span class="dot"></span>${esc(t.name)}</button>`).join('')}</div>`;
   if (quizSetup.scope === 'unit') sub = `<div class="wrap"><select id="qs-unit" class="chip" style="width:100%;height:46px" aria-label="選擇單元">${DATA.tiers.map((t) => `<optgroup label="${t.name}">${UNITS.filter((u) => u.t === t.id).map((u) => `<option value="${u.id}"${quizSetup.unit === u.id ? ' selected' : ''}>${esc(u.title)}（${esc(THEME[u.th].name)}）</option>`).join('')}</optgroup>`).join('')}</select></div>`;
   const n = scopeCards().length;
   const counts = [10, 20, 30, 0];

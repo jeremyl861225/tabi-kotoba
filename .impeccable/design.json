@@ -1,6 +1,6 @@
 {
  "schemaVersion": 2,
- "generatedAt": "2026-10-02T00:12:44+08:00",
+ "generatedAt": "2026-10-02T00:48:46+08:00",
  "title": "Design System: 旅ことば",
  "extensions": {
   "colorMeta": {
@@ -16,35 +16,35 @@
    },
    "fam-basic": {
     "role": "secondary",
-    "displayName": "石板灰藍"
+    "displayName": "紺"
    },
    "fam-move": {
     "role": "secondary",
-    "displayName": "鐵道青"
+    "displayName": "浅葱"
    },
    "fam-stay": {
     "role": "secondary",
-    "displayName": "紅豆"
+    "displayName": "山吹"
    },
    "fam-food": {
     "role": "secondary",
-    "displayName": "醬油"
+    "displayName": "柿"
    },
    "fam-shop": {
     "role": "secondary",
-    "displayName": "藤紫"
+    "displayName": "紅梅"
    },
    "fam-care": {
     "role": "secondary",
-    "displayName": "柿紅"
+    "displayName": "茜"
    },
    "fam-city": {
     "role": "secondary",
-    "displayName": "松葉"
+    "displayName": "若竹"
    },
    "fam-listen": {
     "role": "secondary",
-    "displayName": "桔梗"
+    "displayName": "藤"
    },
    "badge": {
     "role": "tertiary",
@@ -212,8 +212,13 @@
    },
    {
     "name": "The 家族色只當記號 Rule",
-    "body": "八個路線家族色只出現在 10–11px 色點、2px 線條與站點記號，不鋪大面積、不當文字色（深色模式的站名除外，且經過亮度補償）。",
+    "body": "八個路線家族色只出現在 10–11px 色點、2px 線條、站點記號與站號章（玻璃上染 12–30% 的家族色、字用家族深色），不鋪大面積、不當正文色。",
     "section": "colors"
+   },
+   {
+    "name": "The 一行 Rule",
+    "body": "標題、副標、站名、字表的單字與中文都排成一行；放不下就等比縮小字級（data-fit＝最小字級，app.js 的 fitText），縮到最小還放不下才換行。句子（例句、說明）照常換行。（2026-10-02 使用者要求）",
+    "section": "typography"
    },
    {
     "name": "The 不混字 Rule",

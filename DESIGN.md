@@ -34,14 +34,14 @@ colors:
   dusk-3: "#101842"
   dusk-4: "#16234f"
   dusk-5: "#24357a"
-  fam-basic: "#566273"
-  fam-move: "#167793"
-  fam-stay: "#9a526c"
-  fam-food: "#a4613a"
-  fam-shop: "#875a93"
-  fam-care: "#9c534c"
-  fam-city: "#367d5b"
-  fam-listen: "#6e61a0"
+  fam-basic: "#44598b"
+  fam-move: "#1e809c"
+  fam-stay: "#b5811c"
+  fam-food: "#c7632a"
+  fam-shop: "#b94f87"
+  fam-care: "#b63a3f"
+  fam-city: "#378a5f"
+  fam-listen: "#7f5fab"
 typography:
   display:
     fontFamily: "Zen Old Mincho, Hiragino Mincho ProN, YuMincho, Noto Serif JP, Songti TC, serif"
@@ -155,7 +155,7 @@ components:
 - **夜墨** (ink / cta)：淺色模式所有正文與實心按鈕（開始、發音、下一站的「出發」）。深色模式換成 **月白** (dusk-ink)，按鈕字變成深紺。
 
 ### Secondary
-- **路線家族色**（fam-basic 石板灰藍、fam-move 鐵道青、fam-stay 紅豆、fam-food 醬油、fam-shop 藤紫、fam-care 柿紅、fam-city 松葉、fam-listen 桔梗）：只用在色點、路線圖的線、站點完成標記。深色模式下用 oklch 相對色把亮度拉到 ≥0.74、彩度 ≥0.07（不支援時用 color-mix 混白）。
+- **路線家族色**（一天的天色裡的日本傳統色：fam-basic 紺、fam-move 浅葱、fam-stay 山吹、fam-food 柿、fam-shop 紅梅、fam-care 茜、fam-city 若竹、fam-listen 藤；OKLCH 亮度 0.47–0.64、彩度 0.085–0.16）：只用在色點、路線圖的線、站點完成標記與站號章的染色。深色模式下用 oklch 相對色把亮度拉到 ≥0.74、彩度 ≥0.07（不支援時用 color-mix 混白）。
 
 ### Tertiary
 - **徽章金** (badge)：分頁列上的待複習數字徽章，墨色字。
@@ -171,7 +171,7 @@ components:
 ### Named Rules
 **The 天空上色 Rule.** 介面元件不自己帶底色；要顏色就讓天空透過玻璃。唯一的實心色塊是 CTA（夜墨／月白）。
 
-**The 家族色只當記號 Rule.** 八個路線家族色只出現在 10–11px 色點、2px 線條與站點記號，不鋪大面積、不當文字色（深色模式的站名除外，且經過亮度補償）。
+**The 家族色只當記號 Rule.** 八個路線家族色只出現在 10–11px 色點、2px 線條、站點記號與站號章（玻璃上染 12–30% 的家族色、字用家族深色），不鋪大面積、不當正文色。
 
 ## Typography
 
@@ -189,6 +189,8 @@ components:
 - **Label** (500, 11–14px)：編號、站數、羅馬拼音 (16px)、分頁名稱 (11px／700)。
 
 ### Named Rules
+**The 一行 Rule.** 標題、副標、站名、字表的單字與中文都排成一行；放不下就等比縮小字級（`data-fit`＝最小字級，app.js 的 `fitText`），縮到最小還放不下才換行。句子（例句、說明）照常換行。（2026-10-02 使用者要求）
+
 **The 不混字 Rule.** 畫面上只有明朝與宋體兩種字；系統無襯線字（-apple-system、PingFang）不進 UI。字型檔只有兩個字重：400–600 都對到 500 檔，700–900 都對到 900 檔。
 
 ## Layout
@@ -218,6 +220,9 @@ components:
 - **Primary:** 夜墨底、白字（深色模式月白底、深紺字），600 字重。
 - **Hover / Focus:** 按下縮到 0.96–0.97（0.12 秒）；鍵盤焦點是 2px 墨色外框、間距 3px。
 - **Ghost:** 玻璃底＋玻璃陰影、墨色字。
+
+### 站號章
+- **Style:** 44×48px、圓角 14px 的小玻璃，上下漸層染 12%→24% 的家族色（深色模式 30%→14%），1px 家族色細邊＋上緣高光；「必／常／進」與兩位數站號用家族深色字。
 
 ### Chips
 - **Style:** glass-2 底、1px 玻璃邊、14px／500。
