@@ -50,13 +50,14 @@ export function play(id, part = 'w', btn = null, voice = null) {
   return v;
 }
 
-// 字典的字：audio/d/<JMdict 編號>.mp3，點了才抓；抓不到（離線、沒有這個檔）時呼叫 onFail（退回手機語音）
-export function playFile(src, btn = null, onFail = null) {
+// 單一音檔（字典 audio/d/、專欄 audio/c/、聽力 audio/q/、五十音 audio/l/）：點了才抓；抓不到（離線、沒有這個檔）時呼叫 onFail
+// rate：指定語速（數字聽力的「慢速」用），不給就照設定
+export function playFile(src, btn = null, onFail = null, rate = null) {
   clearPlaying();
   player.pause();
   player.src = src;
-  player.defaultPlaybackRate = store.settings.rate;
-  player.playbackRate = store.settings.rate;
+  player.defaultPlaybackRate = rate || store.settings.rate;
+  player.playbackRate = rate || store.settings.rate;
   if ('preservesPitch' in player) player.preservesPitch = true;
   if (btn) { playingBtn = btn; btn.classList.add('playing'); }
   const p = player.play();

@@ -35,5 +35,10 @@ tools/build_data.py           # 組 data/cards.json＋檢查
 tools/make_audio.py           # 產生發音
 tools/tts_check.py            # 找語音念錯讀音的單字（再用 tts_alt.py 確認）
 tools/build_dict.py           # 離線字典
+tools/build_numbers.py        # 數字與量詞專欄＋數字聽力題庫 → data/numbers.json
+tools/build_letters.py        # 五十音課程 → data/letters.json
+tools/make_extra_audio.py     # 專欄、聽力題、五十音的音檔（audio/c、q、l）
+tools/make_font.py            # Zen Old Mincho 子集
+tools/make_icons.py           # App 圖示（用天空著色器畫背景）
 tools/e2e.py                  # 手機視窗端對端驗收
 ```
