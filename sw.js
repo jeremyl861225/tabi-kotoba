@@ -1,6 +1,6 @@
 // 旅ことば service worker
 // 同一個 github.io origin 上還有別的 PWA：只刪自己的舊快取、只攔自己子路徑的請求。
-const CACHE_VERSION = 'tabi-kotoba-v28';
+const CACHE_VERSION = 'tabi-kotoba-v29';
 const AUDIO_CACHE = 'tabi-kotoba-audio'; // 不帶版本號：改版不清掉已下載的發音
 const CORE = [
   './',
@@ -9,6 +9,7 @@ const CORE = [
   'js/app.js',
   'js/letters.js',
   'js/numbers.js',
+  'js/grammar.js',
   'js/store.js',
   'js/audio.js',
   'js/ruby.js',
@@ -23,6 +24,7 @@ const CORE = [
   'data/cards.json',
   'data/letters.json',
   'data/numbers.json',
+  'data/grammar.json',
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',

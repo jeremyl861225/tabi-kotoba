@@ -6,6 +6,7 @@
 - 每張字卡：漢字上方標假名、發音（女聲 Nanami／男聲 Keita 交替）、旅途情境例句與中文。
 - 依「旅遊實用頻率」排序，分必備、常用、進階三級，級內依主題分課；每課可學習與測驗。
 - 測驗八種題型：看日文選中文、看中文選日文、看漢字選讀音、聽發音選單字、聽發音選中文、聽例句選意思、用假名方塊拼出讀音、聽寫。
+- 專欄與課程：五十音（平假名、片假名）、數字與量詞（變音自動標色）＋數字聽力、**文法 34 課**（語序、助詞、動詞與形容詞的變化、旅行必備句型、存在與位置、疑問詞、店員常聽到的敬語；每課有重點、變化表、可點播的例句和練習）。
 - 星號標記不熟的字，另有專區複習與測驗；可依等級、主題、漢字、假名、羅馬拼音或中文搜尋，字卡以外的字查離線字典。
 
 ## 旅遊實用頻率怎麼算
@@ -37,7 +38,8 @@ tools/tts_check.py            # 找語音念錯讀音的單字（再用 tts_alt.
 tools/build_dict.py           # 離線字典
 tools/build_numbers.py        # 數字與量詞專欄＋數字聽力題庫 → data/numbers.json
 tools/build_letters.py        # 五十音課程 → data/letters.json
-tools/make_extra_audio.py     # 專欄、聽力題、五十音的音檔（audio/c、q、l）
+tools/build_grammar.py        # 文法專欄（tools/grammar/*.py 手寫）→ data/grammar.json＋音檔清單
+tools/make_extra_audio.py     # 專欄、聽力題、五十音、文法的音檔（audio/c、q、l、g）
 tools/make_font.py            # Zen Old Mincho 子集
 tools/make_icons.py           # App 圖示（用天空著色器畫背景）
 tools/e2e.py                  # 手機視窗端對端驗收
