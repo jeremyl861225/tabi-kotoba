@@ -350,7 +350,7 @@ function cardHTML(card, opts = {}) {
   return `<article class="card stage${lastDir ? ' from-' + lastDir : ''}">
     <div class="face">
     <span class="card-no" aria-label="編號 ${no4(card)}">${no4(card)}</span>
-    <div class="word" lang="ja" style="--hw:${wordSize(w, 104)}px">${rubyHTML(card.w)}</div>
+    <div class="word" lang="ja" style="--hw:${wordSize(w, 72)}px">${rubyHTML(card.w)}</div>
     ${romaji}
     <p class="meaning${veil}" data-veil tabindex="0">${esc(card.zh)}</p>
     <span class="pos">${esc(card.pos || '')}</span>

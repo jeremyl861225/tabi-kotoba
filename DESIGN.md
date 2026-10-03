@@ -46,7 +46,7 @@ colors:
 typography:
   display:
     fontFamily: "Zen Old Mincho, Hiragino Mincho ProN, YuMincho, Noto Serif JP, Songti TC, serif"
-    fontSize: "clamp(40px, 26vw, 104px)"
+    fontSize: "clamp(32px, 18vw, 72px)"
     fontWeight: 900
     lineHeight: 1.3
     letterSpacing: "0.02em"
@@ -183,7 +183,7 @@ components:
 **Character:** 一整套明朝：日文用禪舊明朝的粗筆，中文用宋體，兩者都是有筆鋒的襯線字，像車站木牌上的字。數字一律等寬 (tabular-nums)。
 
 ### Hierarchy
-- **Display** (900, 依字數自動縮放、上限 104px, 1.3)：字卡的大字，假名標音 0.34em。
+- **Display** (900, 依字數自動縮放、上限 72px（2026-10-03 使用者嫌太大）, 1.3)：字卡的大字，假名標音 0.34em。
 - **Headline** (900, 40px, 1.2)：首頁「下一站」站名。
 - **Title** (900, 23px)：路線分級標題；路線家族名 16px／700。
 - **Body** (400, 16px, 1.55)：中文內文；字卡中文意思 24px／600。
