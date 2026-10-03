@@ -97,7 +97,7 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
 
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--sky-base); }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; background: var(--sky-base); touch-action: pan-x pan-y; }   /* 只能捲動、不能縮放（雙擊、兩指都不行；2026-10-03） */
 body {
   margin: 0;
   min-height: 100vh;
@@ -826,9 +826,11 @@ html.splashing #app, html.splashing .tabbar { opacity: 0; }
   background: var(--glass-3); box-shadow: inset 0 1px 0 var(--edge), 0 8px 16px -12px var(--shade);
   font-family: var(--head); font-weight: 900; font-size: 26px; line-height: 1;
 }
-.ex-t { display: grid; min-width: 0; }
-.ex-t b { font-family: var(--head); font-size: 16px; font-weight: 700; white-space: nowrap; }
-.ex-t small { font-family: var(--ui); font-size: 12px; color: var(--ink-2); white-space: nowrap; }
+/* 文字欄：寬度鎖在格子裡（minmax(0, 1fr)），一行字放不下時 data-fit 縮小；2026-10-03 使用者回報說明字溢出蓋到旁邊那格 */
+.ex-t { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; overflow: hidden; }
+.ex-t b { font-family: var(--head); font-size: 16px; font-weight: 700; line-height: 1.35; }
+.ex-t small { font-family: var(--ui); font-size: 12px; color: var(--ink-2); line-height: 1.35; }
+@media (max-width: 360px) { .extra { gap: 8px; padding: 8px 9px; } .ex-glyph { width: 36px; height: 36px; border-radius: 12px; font-size: 21px; } .ex-t b { font-size: 15px; } }
 
 /* 共用：頁首、分頁、提示 */
 .lt-head { margin: 4px 2px 12px; }
@@ -911,6 +913,20 @@ html.splashing #app, html.splashing .tabbar { opacity: 0; }
   background: var(--glass-2); box-shadow: inset 0 1px 0 var(--edge), inset 0 0 0 1px var(--edge-2);
 }
 .nm-cell:active { transform: scale(0.96); }
+/* 有變音的整格染色＋同色框，四類各一色（2026-10-03 使用者：變音的整格要做出區別，濁音與半濁音要不同）：
+   濁音＝藍、半濁音＝茜紅、促音＝山吹、特殊念法＝藤紫；讀音裡變了的字用同一套顏色 */
+:root { --c-d: #2f62b8; --c-p: #b63a3f; --c-s: #9a6400; --c-x: #7a4fae; }
+:root[data-theme="dark"] { --c-d: #90b4ff; --c-p: #ff9b8f; --c-s: #f2c55a; --c-x: #caa9ff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --c-d: #90b4ff; --c-p: #ff9b8f; --c-s: #f2c55a; --c-x: #caa9ff; } }
+.nm-cell.irr-d { --hc: var(--c-d); } .nm-cell.irr-p { --hc: var(--c-p); } .nm-cell.irr-s { --hc: var(--c-s); } .nm-cell.irr-x { --hc: var(--c-x); }
+.nm-cell.irr {
+  background: color-mix(in srgb, var(--hc) 14%, rgb(255 255 255 / 0.62));
+  box-shadow: inset 0 1px 0 var(--edge), inset 0 0 0 1.5px color-mix(in srgb, var(--hc) 55%, transparent);
+}
+.nm-cell.irr .r { color: var(--ink); }
+:root[data-theme="dark"] .nm-cell.irr { background: color-mix(in srgb, var(--hc) 24%, rgb(255 255 255 / 0.04)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .nm-cell.irr { background: color-mix(in srgb, var(--hc) 24%, rgb(255 255 255 / 0.04)); } }
+.nm-cell .r em.c-d { color: var(--c-d); } .nm-cell .r em.c-p { color: var(--c-p); } .nm-cell .r em.c-s { color: var(--c-s); } .nm-cell .r em.c-x { color: var(--c-x); }
 .nm-cell b { font-family: var(--jp); font-size: 19px; font-weight: 700; line-height: 1.3; white-space: nowrap; }
 .nm-cell .r { font-family: var(--jp); font-size: 13px; color: var(--ink-2); line-height: 1.4; word-break: break-all; }
 .nm-cell .r em { font-style: normal; font-weight: 700; color: var(--hl); }
@@ -934,7 +950,9 @@ html.splashing #app, html.splashing .tabbar { opacity: 0; }
   font-family: var(--num); font-size: 26px; font-weight: 700;
   background: var(--glass-2); box-shadow: inset 0 1px 0 var(--edge), inset 0 0 0 1px var(--edge-2);
 }
-.nq-key.fn { font-size: 22px; color: var(--ink-2); }
+.nq-key.fn { font-size: 22px; color: var(--ink-2); display: grid; place-items: center; }
+.nq-key.fn .ico { width: 28px; height: 28px; }
+.nq-key.txt { font-family: var(--ui); font-size: 15px; font-weight: 700; }
 .nq-key:active { background: var(--press); transform: scale(0.97); }
 .nq-key[disabled] { opacity: 0.35; }
 .nq-script { display: grid; gap: 2px; margin: 4px 0 14px; }

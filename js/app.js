@@ -296,10 +296,10 @@ function viewHome() {
 // 專欄與課程的入口（2026-10-02）：五十音、數字與量詞
 function extrasHTML() {
   const lp = lettersProgress();
-  const ls = lp ? (lp.done ? `學完 ${lp.done}／${lp.total} 課` : lp.sub) : '平假名・片假名';
+  const ls = lp && lp.done ? `學完 ${lp.done}／${lp.total} 課` : '平假名・片假名';   // 格子很窄，只放短字（2026-10-03 原本的「平假名 9 課、片假名 6 課」溢出）
   return `<div class="extras" role="group" aria-label="專欄與課程">
-    <a class="extra" href="#/letters"><b class="ex-glyph" lang="ja">あ</b><span class="ex-t"><b data-fit="13">五十音</b><small data-fit="10">${esc(ls)}</small></span></a>
-    <a class="extra" href="#/numbers"><b class="ex-glyph" lang="ja">数</b><span class="ex-t"><b data-fit="13">數字與量詞</b><small data-fit="10">變音・日期・聽力</small></span></a>
+    <a class="extra" href="#/letters"><b class="ex-glyph" lang="ja">あ</b><span class="ex-t"><b data-fit="13">五十音</b><small data-fit="9">${esc(ls)}</small></span></a>
+    <a class="extra" href="#/numbers"><b class="ex-glyph" lang="ja">数</b><span class="ex-t"><b data-fit="13">數字與量詞</b><small data-fit="9">變音・日期・聽力</small></span></a>
   </div>`;
 }
 

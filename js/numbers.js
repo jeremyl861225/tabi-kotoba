@@ -37,15 +37,36 @@ export async function numbersAudio() {
 }
 
 /* ---------- 專欄 ---------- */
+// 變音分四類、各一個顏色（2026-10-03 使用者：變音的整格要做出區別，濁音與半濁音要不同）：
+// d 濁音（゛：ぼ、ぜ、が）、p 半濁音（゜：ぽ、ぴ、ぱ）、s 促音（っ）、x 特殊念法（ひとり、よじ、ついたち…）
+const DAKU = new Set('がぎぐげござじずぜぞだぢづでどばびぶべぼガギグゲゴザジズゼゾダヂヅデドバビブベボヴ');
+const HANDAKU = new Set('ぱぴぷぺぽパピプペポ');
+const kindOf = (ch) => (HANDAKU.has(ch) ? 'p' : DAKU.has(ch) ? 'd' : ch === 'っ' || ch === 'ッ' ? 's' : 'x');
 function reading(it) {
   const r = it.r;
-  if (!it.hi) return C.esc(r);
-  let out = '', last = 0;
-  for (const [a, b] of it.hi) { out += C.esc(r.slice(last, a)) + `<em>${C.esc(r.slice(a, b))}</em>`; last = b; }
-  return out + C.esc(r.slice(last));
+  if (!it.hi) return { html: C.esc(r), kind: '' };
+  let html = '', last = 0;
+  const kinds = new Set();
+  for (const [a, b] of it.hi) {
+    html += C.esc(r.slice(last, a));
+    // 同一類的字連在一起包成一段
+    let run = '', k0 = null;
+    for (const ch of r.slice(a, b)) {
+      const k = kindOf(ch);
+      kinds.add(k);
+      if (k !== k0 && run) { html += `<em class="c-${k0}">${C.esc(run)}</em>`; run = ''; }
+      run += ch; k0 = k;
+    }
+    if (run) html += `<em class="c-${k0}">${C.esc(run)}</em>`;
+    last = b;
+  }
+  html += C.esc(r.slice(last));
+  // 整格的顏色：半濁音 > 濁音 > 促音 > 特殊（いっぽん 有促音也有半濁音，算半濁音）
+  const kind = ['p', 'd', 's', 'x'].find((k) => kinds.has(k));
+  return { html, kind };
 }
-const cell = (it) => `<button class="nm-cell${it.hi ? ' irr' : ''}" data-nm-say="${it.a}" aria-label="${C.esc(it.w)}：${C.esc(it.r)}">
-  <b lang="ja">${C.esc(it.w)}</b><span class="r" lang="ja">${reading(it)}</span>${it.alt ? `<small lang="ja">也念 ${C.esc(it.alt)}</small>` : ''}</button>`;
+const cell = (it) => { const rd = reading(it); return `<button class="nm-cell${rd.kind ? ` irr irr-${rd.kind}` : ''}" data-nm-say="${it.a}" aria-label="${C.esc(it.w)}：${C.esc(it.r)}">
+  <b lang="ja">${C.esc(it.w)}</b><span class="r" lang="ja">${rd.html}</span>${it.alt ? `<small lang="ja">也念 ${C.esc(it.alt)}</small>` : ''}</button>`; };
 const group = (g) => `<section class="panel nm-group"><h2>${C.esc(g.title)}</h2>${g.note ? `<p class="nm-note">${C.esc(g.note)}</p>` : ''}
   <div class="nm-grid">${g.items.map(cell).join('')}</div></section>`;
 
@@ -101,8 +122,8 @@ function shuffle(a) {
 function fieldsOf(q) {
   switch (q.k) {
     case 'price': return [{ k: 'n', max: 6, after: '円' }];
-    case 'date': return [{ k: 'm', max: 2, after: '月' }, { k: 'd', max: 2, after: '日' }];
-    case 'time': return [{ k: 'h', max: 2, after: '時' }, { k: 'mi', max: 2, after: '分' }];
+    case 'date': return [{ k: 'm', max: 2, hi: 12, after: '月' }, { k: 'd', max: 2, hi: 31, after: '日' }];
+    case 'time': return [{ k: 'h', max: 2, hi: 23, after: '時' }, { k: 'mi', max: 2, hi: 59, after: '分' }];
     default: return [{ k: 'n', max: 2, after: q.unit === 'つ' ? 'つ' : q.unit }];
   }
 }
@@ -151,10 +172,12 @@ function renderQ(autoplay = false) {
     return `<button class="${cls}" data-nq-field="${i}" ${done ? 'disabled' : ''} aria-label="${f.after}">${C.esc(v) || '<span class="ph">？</span>'}</button><span class="nq-after" lang="ja">${C.esc(f.after)}</span>`;
   }).join('');
   const ready = fs.every((f) => (it.vals[f.k] || '').length);
-  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'del', '0', 'next'].map((k) => (k === 'del'
-    ? `<button class="nq-key fn" data-nq-key="del" aria-label="刪除">⌫</button>`
-    : k === 'next' ? `<button class="nq-key fn" data-nq-key="next" aria-label="下一格" ${fs.length > 1 ? '' : 'disabled'}>→</button>`
-      : `<button class="nq-key" data-nq-key="${k}">${k}</button>`)).join('');
+  // 鍵盤（2026-10-03 使用者：退位鍵太醜、右下角的鍵沒用）：右下角退位（線條圖示）；
+  // 左下角在只有一格的題目（金額、數量）是「00」，兩格的（日期、時間）是「下一格」；另外打到不可能的數字會自動跳格（4 月→直接到日）
+  const left = fs.length > 1 ? `<button class="nq-key fn txt" data-nq-key="next" aria-label="下一格">下一格</button>` : '<button class="nq-key" data-nq-key="00">00</button>';
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((k) => `<button class="nq-key" data-nq-key="${k}">${k}</button>`).join('')
+    + left + '<button class="nq-key" data-nq-key="0">0</button>'
+    + `<button class="nq-key fn" data-nq-key="del" aria-label="刪除"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 5.5H19a1.6 1.6 0 011.6 1.6v9.8a1.6 1.6 0 01-1.6 1.6H9.2L3.4 12z"/><path d="M11.6 9.4l5.2 5.2M16.8 9.4l-5.2 5.2"/></svg></button>`;
   let sheet = '';
   if (done) {
     sheet = `<div class="sheet ${it.result ? 'ok' : 'ng'}" role="status"><div class="sheet-inner">
@@ -193,11 +216,23 @@ function press(k) {
     else if (it.f > 0) it.f -= 1;
   } else if (k === 'next') {
     it.f = (it.f + 1) % fs.length;
-  } else if (v.length < f.max) {
-    it.vals[f.k] = (v === '0' ? '' : v) + k;
-    if (it.vals[f.k].length >= f.max && it.f < fs.length - 1) it.f += 1;   // 填滿就跳下一格
-  }
+  } else if (k === '00') {
+    typeDigit(it, fs, '0'); typeDigit(it, fs, '0');
+  } else typeDigit(it, fs, k);
   renderQ();
+}
+
+// 打一位數：超過這格的上限（13 月、32 日、24 時、60 分）就當成下一格的第一位；
+// 再多一位一定超過上限或已經填滿時，自動跳下一格（月份打 4 → 直接跳到日）
+function typeDigit(it, fs, d) {
+  const f = fs[it.f];
+  const v = it.vals[f.k] || '';
+  const next = (v === '0' ? '' : v) + d;
+  const last = it.f >= fs.length - 1;
+  if (!last && (v.length >= f.max || (f.hi != null && v && Number(next) > f.hi))) { it.f += 1; typeDigit(it, fs, d); return; }
+  if (v.length >= f.max) return;
+  it.vals[f.k] = next;
+  if (!last && (next.length >= f.max || (f.hi != null && Number(next) * 10 > f.hi))) it.f += 1;
 }
 
 function check() {
