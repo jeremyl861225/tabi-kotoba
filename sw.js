@@ -1,6 +1,6 @@
 // 旅ことば service worker
 // 同一個 github.io origin 上還有別的 PWA：只刪自己的舊快取、只攔自己子路徑的請求。
-const CACHE_VERSION = 'tabi-kotoba-v24';
+const CACHE_VERSION = 'tabi-kotoba-v25';
 const AUDIO_CACHE = 'tabi-kotoba-audio'; // 不帶版本號：改版不清掉已下載的發音
 const CORE = [
   './',
@@ -50,6 +50,8 @@ const AUDIO_REDO = {
   ],
   // 2026-09-29 v18：例句裡的「大トロ」念成だいトロ（料理擴充時一起修）
   v18: ['0822x'],
+  // 2026-10-03 v25：「〜杯」的は被當成助詞改成 わ，念成 わい（使用者回報）
+  v25: ['1793'],
 };
 
 self.addEventListener('install', (event) => {
