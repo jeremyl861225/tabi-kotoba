@@ -8,7 +8,7 @@
 讀音全部寫成假名送給語音服務（數字寫法交給語音服務會念錯：一日、四時、何階…），所以念法一定照這裡的表。
 變音的標示：拿「數字的念法＋量詞的基本念法」直接接起來比對，不一樣的部分標色（例：3本 さん＋ほん→さんぼん，標「ぼん」）。
 題庫用固定亂數種子產生，重跑結果一樣；改了題目要重跑 make_extra_audio.py。"""
-import difflib, json, os, random
+import difflib, hashlib, json, os, random
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WORK = os.environ.get("TK_WORK", os.path.expanduser("~/Desktop/Claude code/workspace/work/jp-travel-vocab"))
@@ -112,6 +112,39 @@ COUNTERS = [
     ("円", "えん", "日圓", "4 念 よえん；其他規則。問價錢說 いくら。",
      {4: "よえん"}, "いくら", {}),
 ]
+def counter_kana(c, n):
+    """量詞配任意正整數的念法（2026-10-03 使用者：量詞題可以多位數，例如 1346 人）。
+    從 COUNTERS 的 1～10 表推：變音只看最後一段——
+    個位數 d≠0：前面照念＋「d 的念法」（16本＝じゅう＋ろっぽん；11人、12人 例外：いちにん、ににん）
+    整十：把最後的「じゅう」換成「10 的念法」（40本＝よん＋じゅっぽん）
+    整百：「ひゃく」在促音化的量詞前變「ひゃっ」（300本＝さんびゃっぽん、100人＝ひゃくにん）
+    整千、整萬：結尾是「ん」，用「3 的念法」去掉 さん 的部分（3000本＝さんぜん＋ぼん、1000人＝せん＋にん）"""
+    base, irr = next((b, i) for cc, b, _, _, i, _, _ in COUNTERS if cc == c)
+    form = lambda d: irr.get(d, ONES[d] + base)
+    if c == "歳" and n == 20:
+        return "はたち"
+    if n <= 10:
+        return form(n)
+    if c == "つ":
+        raise ValueError("つ 只到 10")
+    after_n = form(3)[len("さん"):]
+    ten = form(10)
+    if n % 10:
+        d = n % 10
+        f = ({1: "いち" + base, 2: "に" + base} if c == "人" else {}).get(d) or form(d)
+        return num_kana(n - d) + f
+    if n % 100:
+        t = n // 10 % 10
+        rest = n - t * 10
+        return (num_kana(rest) if rest else "") + TENS[t][: -len("じゅう")] + ten
+    if n % 1000:
+        h = n // 100 % 10
+        head = num_kana(n - h * 100) if n - h * 100 else ""
+        hy = HUNDREDS[h]
+        return head + (hy[:-1] + "っ" + ten[len("じゅっ"):] if ten.startswith("じゅっ") else hy + ten[len("じゅう"):])
+    return num_kana(n) + after_n
+
+
 COUNTER_SLUG = {"つ": "tsu", "個": "ko", "人": "nin", "名": "mei", "本": "hon", "杯": "hai", "枚": "mai", "冊": "satsu", "匹": "hiki",
                 "台": "dai", "回": "kai", "階": "kaii", "歳": "sai", "泊": "haku", "足": "soku", "着": "chaku", "軒": "ken", "番線": "bansen", "円": "en"}
 
@@ -269,8 +302,9 @@ def build_quiz():
 
     def add(kind, say, show, ans, **kw):
         i = len(qs) + 1
-        key = f"q/{kind[0]}{i:03d}"
         v = voice[i % 2]
+        # 音檔用內容命名：句子或聲音改了就是新網址，手機上快取的舊音檔不會播錯（2026-10-03 起；原本是流水號）
+        key = f"q/{kind[0]}-{hashlib.sha1(f'{say}|{v}'.encode()).hexdigest()[:10]}"
         qs.append({"k": kind, "say": say, "show": show, "ans": ans, "a": key, "v": v, **kw})
         TTS.append({"file": f"audio/{key}.mp3", "text": say, "voice": v, "rate": "+0%"})
 
@@ -336,27 +370,53 @@ def build_quiz():
                 mi = 30
         add("time", say[0].format(k=k), say[1].format(t=show_t), {"h": h, "mi": mi})
 
-    # 數量（量詞）：1～10，跟專欄的量詞表對應
-    goods = [("つ", [("りんご", "りんご"), ("おにぎり", "おにぎり"), ("これ", "これ")], "{x}を、{k}ください。", "{x}を{w}ください。"),
+    # 數量（量詞）：1～10 的變音重點，加上多位數（2026-10-03 使用者：可以多位數一點，例如 1346 人）
+    small = [("つ", [("りんご", "りんご"), ("おにぎり", "おにぎり"), ("これ", "これ")], "{x}を、{k}ください。", "{x}を{w}ください。"),
              ("個", [("たまご", "卵"), ("ケーキ", "ケーキ"), ("にもつ", "荷物")], "{x}を、{k}ください。", "{x}を{w}ください。"),
              ("本", [("ビール", "ビール"), ("みず", "水"), ("かさ", "傘")], "{x}を、{k}ください。", "{x}を{w}ください。"),
-             ("枚", [("きっぷ", "切符"), ("チケット", "チケット"), ("おさら", "お皿")], "{x}を、{k}ください。", "{x}を{w}ください。"),
-             ("杯", [("コーヒー", "コーヒー"), ("ごはん", "ご飯"), ("なまビール", "生ビール")], "{x}を、{k}ください。", "{x}を{w}ください。"),
+             ("枚", [("きっぷ", "切符"), ("チケット", "チケット")], "{x}を、{k}ください。", "{x}を{w}ください。"),
+             ("杯", [("コーヒー", "コーヒー"), ("なまビール", "生ビール")], "{x}を、{k}ください。", "{x}を{w}ください。"),
              ("人", [("おとな", "大人"), ("こども", "子供")], "{x}、{k}です。", "{x}{w}です。"),
              ("泊", [("", "")], "{k}、よやくしています。", "{w}予約しています。"),
-             ("階", [("おてあらい", "お手洗い"), ("レストラン", "レストラン")], "{x}は、{k}です。", "{x}は{w}です。"),
-             ("冊", [("ほん", "本")], "{x}を、{k}かいました。", "{x}を{w}買いました。"),
-             ("台", [("タクシー", "タクシー")], "{x}を、{k}よびます。", "{x}を{w}呼びます。")]
-    table = {c: (base, irr) for c, base, _, _, irr, _, _ in COUNTERS}
-    per = {"つ": 12, "個": 10, "本": 14, "枚": 10, "杯": 12, "人": 12, "泊": 8, "階": 10, "冊": 6, "台": 6}
-    for c, items_, say_t, show_t in goods:
-        base, irr = table[c]
-        nums = [1, 3, 6, 8, 10, 4] + [rnd.randint(1, 10) for _ in range(per[c] - 6)]
+             ("階", [("おてあらい", "お手洗い"), ("レストラン", "レストラン")], "{x}は、{k}です。", "{x}は{w}です。")]
+    per = {"つ": 6, "個": 5, "本": 6, "枚": 4, "杯": 5, "人": 5, "泊": 4, "階": 5}
+    for c, items_, say_t, show_t in small:
+        nums = [1, 3, 6, 8, 10, 4][:per[c]] + [rnd.randint(1, 10) for _ in range(per[c] - 6)]
         for n in nums:
             x_say, x_show = rnd.choice(items_)
-            k = irr.get(n, ONES[n] + base)
             w = (f"{KANJI_NUM[n]}つ" if n < 10 else "十") if c == "つ" else f"{n}{c}"
-            add("count", say_t.format(x=x_say, k=k), show_t.format(x=x_show, w=w), {"n": n}, unit=c, item=x_show)
+            add("count", say_t.format(x=x_say, k=counter_kana(c, n)), show_t.format(x=x_show, w=w), {"n": n}, unit=c, item=x_show)
+    # 多位數：每個量詞給合理的範圍與情境；刻意放 1、3、6、8、整十、整百、整千結尾（變音都在最後一段）
+    big = [("人", (11, 9999), [("きょうの おきゃくさんは、{k}です。", "今日のお客さんは{w}です。"), ("かいじょうには、{k}が います。", "会場には{w}がいます。"),
+                                ("ツアーの さんかしゃは、{k}です。", "ツアーの参加者は{w}です。")], "お客さん"),
+           ("本", (11, 300), [("でんしゃは、いちにちに {k} あります。", "電車は一日に{w}あります。"), ("ビールを、{k} ちゅうもんしました。", "ビールを{w}注文しました。")], "電車・ビール"),
+           ("枚", (11, 800), [("きっぷを、{k} うりました。", "切符を{w}売りました。"), ("しゃしんを、{k} とりました。", "写真を{w}撮りました。")], "切符・写真"),
+           ("個", (11, 600), [("ぎょうざを、{k} つくりました。", "餃子を{w}作りました。"), ("にもつは、ぜんぶで {k} です。", "荷物は全部で{w}です。")], "餃子・荷物"),
+           ("台", (11, 500), [("ちゅうしゃじょうに、{k} とまっています。", "駐車場に{w}止まっています。")], "車"),
+           ("回", (11, 120), [("この バスは、いちにちに {k} はしります。", "このバスは一日に{w}走ります。")], "公車班次"),
+           ("階", (11, 60), [("てんぼうだいは、{k}です。", "展望台は{w}です。")], "樓層"),
+           ("歳", (11, 99), [("そぼは、{k}です。", "祖母は{w}です。"), ("この きは、{k}です。", "この木は{w}です。")], "年齡"),
+           ("杯", (11, 30), [("コーヒーを、こんげつ {k} のみました。", "コーヒーを今月{w}飲みました。")], "咖啡"),
+           ("冊", (11, 300), [("この みせには、ガイドブックが {k} あります。", "この店にはガイドブックが{w}あります。")], "書")]
+    per = {"人": 14, "本": 10, "枚": 8, "個": 8, "台": 6, "回": 6, "階": 6, "歳": 8, "杯": 4, "冊": 5}
+    for c, (lo, hi), tmpls, item in big:
+        nums = set()
+        endings = [1, 3, 6, 8, 0, 4]
+        while len(nums) < per[c]:
+            n = rnd.randint(lo, hi)
+            if len(nums) < len(endings):   # 先湊齊各種結尾
+                e = endings[len(nums)]
+                n = n - n % 10 + e if e else (n - n % 10 if n % 100 else n - n % 10 + 10)
+                if n < lo or n > hi:
+                    continue
+            nums.add(n)
+        if c in ("人", "本", "枚", "個", "台"):   # 整百、整千（ひゃっ、せん＋濁音）
+            for n in (100, 300, 600, 800, 1000, 3000):
+                if lo <= n <= hi:
+                    nums.add(n)
+        for n in sorted(nums, key=lambda x: rnd.random()):
+            say_t, show_t = rnd.choice(tmpls)
+            add("count", say_t.format(k=counter_kana(c, n)), show_t.format(w=f"{n:,}{c}"), {"n": n}, unit=c, item=item)
     return qs
 
 

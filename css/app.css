@@ -958,4 +958,9 @@ html.splashing #app, html.splashing .tabbar { opacity: 0; }
 .nq-script { display: grid; gap: 2px; margin: 4px 0 14px; }
 .nq-script span { font-family: var(--jp); font-size: 19px; }
 .nq-script small { font-family: var(--jp); font-size: 14px; color: var(--ink-2); }
-.nq-row .d-main { font-size: 17px; }
+/* 結果頁「答錯的」：寫法、讀音兩行，喇叭在右邊（2026-10-03 使用者回報跑版：原本套字典列的版型、少了左內距與欄位） */
+.nq-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; align-items: center; padding: 12px 10px 12px 16px; }
+.nq-row + .nq-row { box-shadow: inset 0 1px 0 var(--hair); }
+.nq-row .d-main { grid-column: 1; font-family: var(--jp); font-size: 18px; line-height: 1.5; }
+.nq-row .d-z { grid-column: 1; font-family: var(--jp); font-size: 14px; line-height: 1.5; color: var(--ink-2); }
+.nq-row .d-say { grid-column: 2; grid-row: 1 / span 2; }

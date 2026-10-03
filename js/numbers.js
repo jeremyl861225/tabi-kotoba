@@ -124,7 +124,7 @@ function fieldsOf(q) {
     case 'price': return [{ k: 'n', max: 6, after: '円' }];
     case 'date': return [{ k: 'm', max: 2, hi: 12, after: '月' }, { k: 'd', max: 2, hi: 31, after: '日' }];
     case 'time': return [{ k: 'h', max: 2, hi: 23, after: '時' }, { k: 'mi', max: 2, hi: 59, after: '分' }];
-    default: return [{ k: 'n', max: 2, after: q.unit === 'つ' ? 'つ' : q.unit }];
+    default: return [{ k: 'n', max: 5, after: q.unit === 'つ' ? 'つ' : q.unit }];   // 數量也有多位數（1,346 人）
   }
 }
 
@@ -157,7 +157,7 @@ function fmtAnswer(q) {
   if (q.k === 'price') return `${a.n.toLocaleString('en-US')} 円`;
   if (q.k === 'date') return `${a.m} 月 ${a.d} 日`;
   if (q.k === 'time') return `${a.h} 時 ${String(a.mi).padStart(2, '0')} 分`;
-  return `${a.n} ${q.unit}`;
+  return `${a.n.toLocaleString('en-US')} ${q.unit}`;
 }
 
 function renderQ(autoplay = false) {
@@ -168,7 +168,7 @@ function renderQ(autoplay = false) {
   const label = KINDS.find((k) => k[0] === q.k)[1];
   const fields = fs.map((f, i) => {
     const v = it.vals[f.k] || '';
-    const cls = `nq-field${i === it.f && !done ? ' on' : ''}${q.k === 'price' ? ' wide' : ''}`;
+    const cls = `nq-field${i === it.f && !done ? ' on' : ''}${fs.length === 1 ? ' wide' : ''}`;
     return `<button class="${cls}" data-nq-field="${i}" ${done ? 'disabled' : ''} aria-label="${f.after}">${C.esc(v) || '<span class="ph">？</span>'}</button><span class="nq-after" lang="ja">${C.esc(f.after)}</span>`;
   }).join('');
   const ready = fs.every((f) => (it.vals[f.k] || '').length);
@@ -256,7 +256,7 @@ function renderEnd() {
     <div class="topbar"><a class="icon-btn" href="#/numquiz" aria-label="結束">${C.I.close()}</a><span class="title">數字聽力</span></div>
     <section class="terminal"><div class="score">${right}<small>/${total}</small></div>
       <p>${right === total ? '全部答對，數字聽得很熟了。' : `答錯 ${wrong.length} 題，點喇叭再聽一次。`}</p></section>
-    ${wrong.length ? `<h2 class="group-title">答錯的</h2><div class="list">${wrong.map((x) => `<div class="drow nq-row">
+    ${wrong.length ? `<h2 class="group-title">答錯的</h2><div class="list">${wrong.map((x) => `<div class="nq-row">
         <div class="d-main"><span lang="ja">${C.esc(x.q.show)}</span></div><div class="d-z" lang="ja">${C.esc(x.q.say)}</div>
         <button class="d-say" data-nm-say="${x.q.a}" aria-label="再聽一次">${C.I.speaker('ico-s')}</button></div>`).join('')}</div>` : ''}
     <div class="dock"><div class="dock-inner">
